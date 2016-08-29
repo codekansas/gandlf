@@ -8,3 +8,5 @@
 1. Alternative RNN structures
 2. Move away from supervised learning
 3. Easier weight sharing
+
+![Tasks](http://imgs.xkcd.com/comics/tasks.png)
