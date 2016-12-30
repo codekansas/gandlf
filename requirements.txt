@@ -1,5 +1,4 @@
 funcsigs==1.0.2
-gandlf==0.0.1
 Keras==1.2.0
 mock==2.0.0
 numpy==1.11.3
