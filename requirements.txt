@@ -1,0 +1,12 @@
+funcsigs==1.0.2
+gandlf==0.0.1
+Keras==1.2.0
+mock==2.0.0
+numpy==1.11.3
+pbr==1.10.0
+protobuf==3.1.0.post1
+PyYAML==3.12
+scipy==0.18.1
+six==1.10.0
+tensorflow==0.12.1
+Theano==0.8.2

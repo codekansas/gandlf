@@ -28,8 +28,12 @@ class Model(keras.models.Model):
         self.generator = generator
         self.discriminator = discriminator
 
-        # TODO: Need to pass the generator through the discriminator to get
-        # its output tensors.
+        generator_through_discriminator = discriminator(generator.output)
+
+        super(Model, self).__init__(
+            [discriminator.input],
+            [discriminator.output, generator_through_discriminator.output],
+            name)
 
     def _make_sample_function(self):
         if not hasattr(self, 'sample_function'):

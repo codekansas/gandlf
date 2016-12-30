@@ -1,4 +1,4 @@
 import keras
-import gandlf
+from gandlf import Model
 
 print ('Hello world!')
