@@ -10,5 +10,5 @@ setup(name='gandlf',
       url='https://github.com/codekansas/gandlf',
       download_url='https://github.com/codekansas/gandlf/tarball/0.0.1',
       license='MIT',
-      install_requires=['keras', 'tensorflow'],
+      install_requires=['keras'],
       packages=find_packages())
