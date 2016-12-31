@@ -305,7 +305,7 @@ class Model(keras_models.Model):
             is_binary=True)
 
         generator_loss = self._compute_loss(
-            y_true=K.zeros_like(self.discriminator.outputs[0]),
+            y_true=K.zeros_like(self.generator_discriminator.outputs[0]),
             y_pred=self.generator_discriminator.outputs[0],
             weighted_loss=weighted_losses[0],
             loss_weight=loss_weights_list[0],
@@ -406,7 +406,7 @@ class Model(keras_models.Model):
 
         # Prepares metrics.
         self.metrics = _as_list(metrics)
-        self.metrics_names = []
+        self.metrics_names = ['loss']
         self.metrics_tensors = []
 
         self.all_losses, self.targets = self._compute_all_losses(
@@ -687,7 +687,6 @@ class Model(keras_models.Model):
             ins = x + y + sample_weights
 
         out_labels = self._get_out_labels()
-
         callback_metrics = copy.copy(out_labels)
 
         return self._fit_loop(train_fn, ins, nb_train_samples,
@@ -728,6 +727,7 @@ class Model(keras_models.Model):
             'do_validation': False,
             'metrics': callback_metrics or [],
         })
+
         callbacks.on_train_begin()
         callback_model.stop_training = False
         self.validation_data = None
