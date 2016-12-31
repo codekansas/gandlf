@@ -1,14 +1,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import IN
 import copy
 
 from keras import callbacks as keras_callbacks
-from keras import layers as keras_layers
 from keras import metrics as keras_metrics
 from keras import models as keras_models
-from keras import objectives
 from keras import optimizers
 from keras.engine import training
 import six
@@ -152,19 +149,20 @@ class Model(keras_models.Model):
         """Performs checks on loss weights and returns a list of weights."""
 
         if loss_weights is None:
-            return [1. for _ in range(len(self.outputs))]
+            return [1. for _ in range(len(self.discriminator.outputs))]
 
         elif isinstance(loss_weights, dict):
             self._check_input_dictionary_keys(loss_weights.keys(), False)
             return [loss_weights.get(name, 1.) for name in self.output_names]
 
         elif isinstance(loss_weights, (list, tuple)):
-            if len(loss_weights) != len(self.outputs):
+            if len(loss_weights) != len(self.discriminator.outputs):
                 raise ValueError('When passing a list as loss_weights, '
                                  'it should have one entry per model output.'
                                  'The model has %d outputs, but you passed '
                                  'loss_weights=%s' %
-                                 (len(self.outputs), str(loss_weights)))
+                                 (len(self.discriminator.outputs),
+                                  str(loss_weights)))
             return loss_weights
 
         else:
@@ -255,8 +253,6 @@ class Model(keras_models.Model):
             if metric == 'accuracy' or metric == 'acc':
                 if is_binary:
                     acc_fn = keras_metrics.binary_accuracy
-                elif K.is_sparse(y_pred):
-                    acc_fn = keras_metrics.sparse_categorical_accuracy
                 else:
                     acc_fn = keras_metrics.categorical_accuracy
 
@@ -295,8 +291,8 @@ class Model(keras_models.Model):
 
         # Add losses for the binary decision part.
         discriminator_loss = self._compute_loss(
-            y_true=K.ones_like(self.discriminator.outputs[0]),
-            y_pred=self.discriminator.outputs[0],
+            y_true=K.ones_like(self.generator_discriminator.outputs[0]),
+            y_pred=self.generator_discriminator.outputs[0],
             weighted_loss=weighted_losses[0],
             loss_weight=loss_weights_list[0],
             sample_weight=sample_weights[0],
@@ -342,7 +338,7 @@ class Model(keras_models.Model):
             discriminator_loss += loss
 
         all_losses = (generator_loss, discriminator_loss, auxiliary_loss)
-        return all_losses, auxiliary_placeholders[1:]
+        return all_losses, auxiliary_placeholders
 
     def _check_input_dictionary_keys(self, names, check_all=False):
         """Checks to make sure that all the names are valid output_names.
@@ -437,6 +433,16 @@ class Model(keras_models.Model):
         else:
             return []
 
+    def _get_clean_updates(self, params, loss):
+        """Uses optimizer to get weight updates, removing unconnected parts."""
+
+        grads = self.optimizer.get_gradients(loss, params)
+        new_params = [param
+                      for param, grad in zip(params, grads)
+                      if grad is not None]
+
+        return self.optimizer.get_updates(new_params, self.constraints, loss)
+
     def _make_non_auxiliary_train_function(self):
         """Builds the non-auxiliary train function."""
 
@@ -448,19 +454,18 @@ class Model(keras_models.Model):
             # Collects inputs to the function.
             inputs = (self.generator_discriminator.inputs +
                       self.discriminator.inputs +
+                      self.targets +
                       self.sample_weights +
                       self._get_learning_phase())
 
             # Gets the generator updates.
-            generator_updates = self.optimizer.get_updates(
+            generator_updates = self._get_clean_updates(
                 self._collected_trainable_weights[0],
-                self.constraints,
                 self.all_losses[0])
 
             # Gets the discriminator updates.
-            discriminator_updates = self.optimizer.get_updates(
+            discriminator_updates = self._get_clean_updates(
                 self._collected_trainable_weights[1],
-                self.constraints,
                 self.all_losses[1])
 
             updates = generator_updates + discriminator_updates + self.updates
@@ -488,21 +493,18 @@ class Model(keras_models.Model):
                       self._get_learning_phase())
 
             # Gets the generator updates.
-            generator_updates = self.optimizer.get_updates(
+            generator_updates = self._get_clean_updates(
                 self._collected_trainable_weights[0],
-                self.constraints,
                 self.all_losses[0])
 
             # Gets the discriminator updates.
-            discriminator_updates = self.optimizer.get_updates(
+            discriminator_updates = self._get_clean_updates(
                 self._collected_trainable_weights[1],
-                self.contraints,
                 self.all_losses[1])
 
             # Gets the auxiliary updates.
-            auxiliary_updates = self.optimizer.get_updates(
+            auxiliary_updates = self._get_clean_updates(
                 self._collected_trainable_weights[1],
-                self.constraints,
                 self.all_losses[2])
 
             updates = (generator_updates + discriminator_updates +
@@ -530,8 +532,9 @@ class Model(keras_models.Model):
                 updates=self.state_updates,
                 **kwargs)
 
-    def _standardize_input_data(self, data, names, shapes=None,
+    def _standardize_input_data(self, data, names, shapes,
                                 check_batch_dim=True,
+                                nb_train_samples=None,
                                 exception_prefix=''):
         """Standardizes the provided input data."""
 
@@ -544,10 +547,16 @@ class Model(keras_models.Model):
             data = [data.get(name) for name in names]
 
         data = _as_list(data)
+
         if len(data) != len(names):
-            raise ValueError('Incorrect number of inputs to the model '
-                             '(expected %d, got %d)' %
-                             (len(data), len(names)))
+
+            if nb_train_samples and not data:
+                data = [np.zeros(shape=(nb_train_samples,) + shape[1:])
+                        for shape in shapes]
+            else:
+                raise ValueError('Incorrect number of inputs to the model '
+                                 '(expected %d, got %d)' %
+                                 (len(names), len(data)))
 
         fixed_data = []
 
@@ -586,9 +595,21 @@ class Model(keras_models.Model):
         x = self._standardize_input_data(
             x, input_names, input_shapes,
             check_batch_dim=False, exception_prefix='model input')
+
+        # Calculates the number of training samples.
+        nb_train_samples = None
+        for arr in x:
+            if hasattr(arr, 'shape'):
+                nb_train_samples = arr.shape[0]
+                break
+        else:
+            raise ValueError('At least one of the fed inputs must be a Numpy '
+                             'array (usually the real training data).')
+
         y = self._standardize_input_data(
             y, output_names, output_shapes,
-            check_batch_dim=False, exception_prefix='model output')
+            check_batch_dim=False, nb_train_samples=nb_train_samples,
+            exception_prefix='model output')
         sample_weights = training.standardize_sample_weights(
             sample_weight, output_names)
         class_weights = training.standardize_class_weights(
@@ -601,7 +622,7 @@ class Model(keras_models.Model):
         training.check_loss_and_target_compatibility(
             y, self.loss_functions[1:], output_shapes)
 
-        return x, y, sample_weights
+        return x, y, sample_weights, nb_train_samples
 
     def _get_out_labels(self):
         """Gets deduplicated output labels."""
@@ -631,7 +652,10 @@ class Model(keras_models.Model):
                                  'num_samples must be specified.')
             x = [arr if is_numpy_array(arr) else arr(num_samples) for arr in x]
 
-        ins = x + self._get_learning_phase()
+        if self._get_learning_phase():
+            ins = x + [0.]
+        else:
+            ins = x
 
         self._make_sample_function()
         f = self.sample_function
@@ -652,33 +676,24 @@ class Model(keras_models.Model):
                        self.discriminator.input_names)
         input_shapes = (self.generator_discriminator.internal_input_shapes +
                         self.discriminator.internal_input_shapes)
+        output_names = (self.discriminator
+                        .output_names[1:])
+        output_shapes = (self.discriminator
+                             .internal_output_shapes[1:])
 
         if y:
             self._make_auxiliary_train_function()
             train_fn = self.auxiliary_train_function
-            output_shapes = []
-            output_names = []
         else:
             self._make_non_auxiliary_train_function()
             train_fn = self.non_auxiliary_train_function
-            output_shapes = (self.generator_discriminator
-                                 .internal_output_shapes[1:])
-            output_names = (self.generator_discriminator
-                                .output_names[1:])
 
-        x, y, sample_weights = self._standardize_user_data(
+        x, y, sample_weights, nb_train_samples = self._standardize_user_data(
             x, y, sample_weight, input_names, input_shapes, output_names,
             output_shapes, class_weight=class_weight, check_batch_dim=False,
             batch_size=batch_size)
 
-        # Calculates the number of training samples.
-        nb_train_samples = None
-        for arr in x:
-            if hasattr(arr, 'shape'):
-                nb_train_samples = arr.shape[0]
-                break
-
-        # Adds default weights to the head.
+        # Adds default weights to the binary part.
         sample_weights = [np.ones(shape=(nb_train_samples,))] + sample_weights
 
         if self._get_learning_phase():
