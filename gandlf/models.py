@@ -331,8 +331,9 @@ class Model(keras_models.Model):
                     array = np.zeros(shape=(nb_train_samples,) + shape[1:])
                 else:
                     raise ValueError('Error when checking %s:'
-                                     'Invalid name of random type: %s'
-                                     'Choices are "normal" or "uniform".' %
+                                     'Invalid data type string: %s'
+                                     'Choices are "normal", "uniform",'
+                                     '"ones", or "zeros".' %
                                      (exception_prefix, array))
 
             elif hasattr(array, '__call__'):
