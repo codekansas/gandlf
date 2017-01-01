@@ -1,0 +1,8 @@
+site_name: gandlf
+theme: readthedocs
+
+pages:
+- Home: index.md
+- Examples:
+  - MNIST: examples/mnist.md
+
