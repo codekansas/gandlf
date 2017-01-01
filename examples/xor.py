@@ -19,7 +19,6 @@ def get_training_data(num_samples):
 
     y = np.logical_xor(x[:, 0], x[:, 1])
     y = np.cast['int32'](y)
-    y = np.eye(2)[y]
 
     x = np.cast['float32'](x) * 2 - 1  # Scales to [-1, 1].
     x += np.random.normal(scale=0.3, size=x.shape)  # Adds some random noise.
@@ -29,10 +28,13 @@ def get_training_data(num_samples):
 
 def build_generator(latent_size):
     latent_layer = keras.layers.Input(shape=(latent_size,), name='latent')
-    class_input = keras.layers.Input(shape=(2,), name='class')
+    class_input = keras.layers.Input(shape=(1,), name='class')
+    embedded = keras.layers.Embedding(2, latent_size,
+                                      init='glorot_normal')(class_input)
+    flat_embedded = keras.layers.Flatten()(embedded)
 
-    input_layer = keras.layers.merge([latent_layer, class_input],
-                                     mode='concat')
+    input_layer = keras.layers.merge([latent_layer, flat_embedded],
+                                     mode='mul')
     hidden_layer = keras.layers.Dense(16, activation='tanh')(input_layer)
     output_layer = keras.layers.Dense(2)(hidden_layer)
 
@@ -91,9 +93,11 @@ if __name__ == '__main__':
     }, metrics=['accuracy'])
 
     x, y = get_training_data(args.nb_samples)
+    y_ohe = np.eye(2)[y]
+    y = np.expand_dims(y, -1)
 
     model.fit({'latent': 'normal', 'data_input': x, 'class': y},
-              {'generator': 'ones', 'discriminator': 'zeros', 'class': y},
+              {'generator': 'ones', 'discriminator': 'zeros', 'class': y_ohe},
               train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
 
