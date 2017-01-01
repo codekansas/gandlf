@@ -43,7 +43,7 @@ def build_generator(latent_size):
 
 
 def build_discriminator():
-    input_layer = keras.layers.Input(shape=(2,), name='data_input')
+    input_layer = keras.layers.Input(shape=(2,), name='real')
 
     normalized = keras.layers.BatchNormalization()(input_layer)
     hidden_layer = keras.layers.Dense(16, activation='tanh')(normalized)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     y_ohe = np.eye(2)[y]
     y = np.expand_dims(y, -1)
 
-    model.fit({'latent': 'normal', 'data_input': x, 'class': y},
+    model.fit({'latent': 'normal', 'real': x, 'class': y},
               {'generator': 'ones', 'discriminator': 'zeros', 'class': y_ohe},
               train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
@@ -109,11 +109,13 @@ if __name__ == '__main__':
 
     if args.supervised:
         print('\n:: Predictions for Real Data ::')
-        print(np.round(model.predict({'data_input': x[:10]})[1]))
+        print(np.argmax(model.predict({'real': x[:10]})[1], -1)
+              .reshape((-1, 1)))
 
     print('\n:: Generated Input Data (Knowing Target Data) ::')
-    print(model.sample({'latent': 'normal', 'class': y[:10]}))
+    p = model.sample({'latent': 'normal', 'class': y[:10]})
+    print(p)
 
     if args.supervised:
         print('\n:: Predictions for Generated Data ::')
-        print(model.predict({'data_input': 'normal'}, num_samples=10)[1])
+        print(np.argmax(model.predict({'real': p})[1], -1).reshape((-1, 1)))

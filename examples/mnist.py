@@ -94,7 +94,7 @@ def build_discriminator():
     fake = keras.layers.Dense(1, activation='sigmoid',
                               name='generation')(features)
     aux = keras.layers.Dense(10, activation='softmax',
-                             name='auxiliary')(features)
+                             name='class')(features)
 
     return keras.models.Model(input=image, output=[fake, aux],
                               name='discriminator')
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     model = gandlf.Model(build_generator(args.nb_latent),
                          build_discriminator())
     model.compile(optimizer=optimizer, loss={
-        'auxiliary': 'categorical_crossentropy',
+        'class': 'categorical_crossentropy',
         'generator': gandlf.losses.negative_binary_crossentropy,
         'discriminator': 'binary_crossentropy',
     }, metrics=['accuracy'])
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
     model.fit({'latent': 'normal', 'class': y_train, 'real': X_train},
               {'generator': 'ones', 'discriminator': 'zeros',
-               'auxiliary': y_train_ohe},
+               'class': y_train_ohe},
               train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
 
