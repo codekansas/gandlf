@@ -94,20 +94,15 @@ def slice_X(X, start=None, stop=None):
 
 
 class Model(keras_models.Model):
-    """TODO: Docstring.
-
-    Should change the model so that the first output is treated as the "decider"
-    and the other inputs are treated as "auxiliary". The model inputs should
-    be special classes that are treated as random distributions when the model
-    is run.
-    """
+    """TODO: Docstring."""
 
     def __init__(self, generator, discriminator, name=None):
         self._check_generator_and_discriminator(generator, discriminator)
 
         self.generator = generator
         self.discriminator = discriminator
-        self.generator_discriminator = keras_models.Model(
+
+        generator_discriminator = keras_models.Model(
             input=generator.inputs,
             output=discriminator(generator.outputs),
             name='generator_around_discriminator')
@@ -115,7 +110,8 @@ class Model(keras_models.Model):
         self.num_outputs = (len(generator.outputs), len(discriminator.outputs))
 
         # The model is treated as the generator by Keras.
-        super(Model, self).__init__(generator.inputs, generator.outputs, name)
+        super(Model, self).__init__(generator_discriminator.inputs,
+                                    generator_discriminator.outputs, name)
 
     def _check_generator_and_discriminator(self, generator, discriminator):
         """Validates the provided models in a user-friendly way."""
@@ -172,11 +168,10 @@ class Model(keras_models.Model):
     def _prepare_masks(self):
         """Computes the masks all the way from start to end."""
 
-        masks = self.generator_discriminator.compute_mask(
-            self.generator_discriminator.inputs, mask=None)
+        masks = self.compute_mask(self.inputs, mask=None)
 
         if masks is None:
-            return [None for _ in self.generator_discriminator.outputs]
+            return [None for _ in self.outputs]
 
         return _as_list(masks)
 
@@ -291,8 +286,8 @@ class Model(keras_models.Model):
 
         # Add losses for the binary decision part.
         discriminator_loss = self._compute_loss(
-            y_true=K.ones_like(self.generator_discriminator.outputs[0]),
-            y_pred=self.generator_discriminator.outputs[0],
+            y_true=K.ones_like(self.outputs[0]),
+            y_pred=self.outputs[0],
             weighted_loss=weighted_losses[0],
             loss_weight=loss_weights_list[0],
             sample_weight=sample_weights[0],
@@ -301,8 +296,8 @@ class Model(keras_models.Model):
             is_binary=True)
 
         generator_loss = self._compute_loss(
-            y_true=K.zeros_like(self.generator_discriminator.outputs[0]),
-            y_pred=self.generator_discriminator.outputs[0],
+            y_true=K.zeros_like(self.outputs[0]),
+            y_pred=self.outputs[0],
             weighted_loss=weighted_losses[0],
             loss_weight=loss_weights_list[0],
             sample_weight=sample_weights[0],
@@ -315,7 +310,7 @@ class Model(keras_models.Model):
         for i in range(1, len(self.discriminator.outputs)):
             loss = self._compute_loss(
                 y_true=auxiliary_placeholders[i - 1],
-                y_pred=self.discriminator.outputs[i],
+                y_pred=self.outputs[i],
                 weighted_loss=weighted_losses[i],
                 loss_weight=loss_weights_list[i],
                 sample_weight=sample_weights[i],
@@ -452,7 +447,7 @@ class Model(keras_models.Model):
         if self.non_auxiliary_train_function is None:
 
             # Collects inputs to the function.
-            inputs = (self.generator_discriminator.inputs +
+            inputs = (self.inputs +
                       self.discriminator.inputs +
                       self.targets +
                       self.sample_weights +
@@ -486,7 +481,7 @@ class Model(keras_models.Model):
         if self.auxiliary_train_function is None:
 
             # Collects inputs to the function.
-            inputs = (self.generator_discriminator.inputs +
+            inputs = (self.inputs +
                       self.discriminator.inputs +
                       self.targets +
                       self.sample_weights +
@@ -672,9 +667,9 @@ class Model(keras_models.Model):
             raise NotImplementedError('Validation sets are not yet '
                                       'implemented for gandlf models.')
 
-        input_names = (self.generator_discriminator.input_names +
+        input_names = (self.input_names +
                        self.discriminator.input_names)
-        input_shapes = (self.generator_discriminator.internal_input_shapes +
+        input_shapes = (self.internal_input_shapes +
                         self.discriminator.internal_input_shapes)
         output_names = (self.discriminator
                         .output_names[1:])

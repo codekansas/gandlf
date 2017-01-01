@@ -11,8 +11,10 @@ import gandlf
 import numpy as np
 
 
+# For repeatability.
 np.random.seed(1337)
 
+# To make the images work correctly.
 keras.backend.set_image_dim_ordering('th')
 
 
@@ -66,22 +68,22 @@ def build_discriminator():
                                        subsample=(2, 2),
                                        input_shape=(1, 28, 28)))
     cnn.add(keras.layers.LeakyReLU())
-    # cnn.add(keras.layers.Dropout(0.3))
+    cnn.add(keras.layers.Dropout(0.3))
 
     cnn.add(keras.layers.Convolution2D(64, 3, 3, border_mode='same',
                                        subsample=(1, 1)))
     cnn.add(keras.layers.LeakyReLU())
-    # cnn.add(keras.layers.Dropout(0.3))
+    cnn.add(keras.layers.Dropout(0.3))
 
     cnn.add(keras.layers.Convolution2D(128, 3, 3, border_mode='same',
                                        subsample=(2, 2)))
     cnn.add(keras.layers.LeakyReLU())
-    # cnn.add(keras.layers.Dropout(0.3))
+    cnn.add(keras.layers.Dropout(0.3))
 
     cnn.add(keras.layers.Convolution2D(256, 3, 3, border_mode='same',
                                        subsample=(1, 1)))
     cnn.add(keras.layers.LeakyReLU())
-    # cnn.add(keras.layers.Dropout(0.3))
+    cnn.add(keras.layers.Dropout(0.3))
 
     cnn.add(keras.layers.Flatten())
 
