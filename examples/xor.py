@@ -19,10 +19,10 @@ def get_training_data(num_samples):
 
     y = np.logical_xor(x[:, 0], x[:, 1])
     y = np.cast['int32'](y)
-    y = np.eye(2)[y]  # Makes it a choice between two items.
+    y = np.eye(2)[y]
 
     x = np.cast['float32'](x) * 2 - 1  # Scales to [-1, 1].
-    x += np.random.normal(scale=1.)  # Adds some random noise.
+    x += np.random.normal(scale=0.3, size=x.shape)  # Adds some random noise.
 
     return x, y
 
@@ -46,33 +46,70 @@ def build_discriminator():
     normalized = keras.layers.BatchNormalization()(input_layer)
     hidden_layer = keras.layers.Dense(16, activation='tanh')(normalized)
 
-    real_fake_pred = keras.layers.Dense(1, activation='sigmoid')(hidden_layer)
+    real_fake_pred = keras.layers.Dense(1, activation='sigmoid',
+                                        name='real_fake')(hidden_layer)
     class_pred = keras.layers.Dense(2, activation='sigmoid',
                                     name='class')(hidden_layer)
 
+    # The first output of this model (real_fake_pred) is treated as
+    # the "real / fake" predictor.
     return keras.models.Model(input_layer, [real_fake_pred, class_pred],
                               name='discriminator')
 
 
 if __name__ == '__main__':
-    latent_size = 10
-    nb_epoch = 100
-    num_samples = 5
+    parser = argparse.ArgumentParser(
+        description='Basic XOR example using a GAN.')
 
-    model = gandlf.Model(build_generator(latent_size),
+    training_params = parser.add_argument_group('training params')
+    training_params.add_argument('--nb_epoch', type=int, default=10,
+                                 metavar='INT',
+                                 help='number of training epochs')
+    training_params.add_argument('--nb_batch', type=int, default=100,
+                                 metavar='INT',
+                                 help='number of samples per batch')
+    training_params.add_argument('--supervised', default=False,
+                                 action='store_true',
+                                 help='if set, train as an ACGAN')
+
+    model_params = parser.add_argument_group('model params')
+    model_params.add_argument('--nb_latent', type=int, default=10,
+                              metavar='INT',
+                              help='dimensions in the latent vector')
+    model_params.add_argument('--nb_samples', type=int, default=10000,
+                              metavar='INT',
+                              help='total number of training samples')
+
+    args = parser.parse_args()
+
+    model = gandlf.Model(build_generator(args.nb_latent),
                          build_discriminator())
-    model.compile('adam', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss={
+        'class': 'categorical_crossentropy',
+        'generator': gandlf.losses.negative_binary_crossentropy,
+        'discriminator': 'binary_crossentropy',
+    }, metrics=['accuracy'])
 
-    x, y = get_training_data(1000)
+    x, y = get_training_data(args.nb_samples)
 
-    model.fit({'latent': 'normal', 'data_input': x, 'class': y}, {'class': y},
-              nb_epoch=nb_epoch, batch_size=100)
+    model.fit({'latent': 'normal', 'data_input': x, 'class': y},
+              {'generator': 'ones', 'discriminator': 'zeros', 'class': y},
+              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
+              batch_size=args.nb_batch)
 
-    # Samples from the model.
-    p = model.sample({
-        'latent': 'normal',
-        'class': y[:num_samples],
-    }, num_samples=num_samples)
-    print(p)
-    print(x[:num_samples])
-    print(y[:num_samples])
+    print('\n:: Input Data ::')
+    print(x[:10])
+
+    print('\n:: Target Data ::')
+    print(y[:10])
+
+    if args.supervised:
+        print('\n:: Predictions for Real Data ::')
+        print(np.round(model.predict({'data_input': x[:10]})[1]))
+
+    print('\n:: Generated Input Data (Knowing Target Data) ::')
+    print(model.sample({'latent': 'normal', 'class': y[:10]}))
+
+    if args.supervised:
+        print('\n:: Predictions for Generated Data ::')
+        print(model.predict({'data_input': 'normal'}, num_samples=10)[1])
