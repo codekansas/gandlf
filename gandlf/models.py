@@ -325,9 +325,9 @@ class Model(keras_models.Model):
                     array = lambda b: np.random.uniform(size=(b,) + shape_no_b)
                 elif array == 'uniform':
                     array = lambda b: np.random.uniform(size=(b,) + shape_no_b)
-                elif array == 'ones' or array == 'one' or array == 1:
+                elif array == 'ones' or array == 'one' or array == '1':
                     array = np.ones(shape=(nb_train_samples,) + shape[1:])
-                elif array == 'zeros' or array == 'zero' or array == 0:
+                elif array == 'zeros' or array == 'zero' or array == '0':
                     array = np.zeros(shape=(nb_train_samples,) + shape[1:])
                 else:
                     raise ValueError('Error when checking %s:'
