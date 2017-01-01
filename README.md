@@ -5,7 +5,23 @@
 
 This is a framework built on top of [Keras](https://github.com/fchollet/keras) for training [Generative Adversarial Networks](https://arxiv.org/abs/1406.2661).
 
-Some guiding principles, in no particular order:
+## Installation
+
+Using Pip:
+
+    pip install git+https://github.com/codekansas/gandlf
+    pip install h5py  # To save and load Keras models
+
+Installing from source:
+
+    git clone https://github.com/codekansas/gandlf
+    cd gandlf
+    pip install -r requirements.txt
+    python setup.py install
+
+## Guiding Principles
+
+In no particular order:
 
  - *Keras-esque*: The APIs should feel familiar for Keras users, with some minor changes.
  - *Powerful*: Models should support a wide variety of GAN architectures.
