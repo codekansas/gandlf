@@ -119,28 +119,31 @@ if __name__ == '__main__':
         description='Auxiliary Classifier GAN for MNIST digits.')
 
     training_params = parser.add_argument_group('training params')
-    training_params.add_argument('--nb_unsup_epoch', type=int, default=50,
+    training_params.add_argument('--nb_epoch', type=int, default=50,
                                  metavar='INT',
-                                 help='number of unsupervised epochs.')
-    training_params.add_argument('--nb_sup_epoch', type=int, default=10,
-                                 metavar='INT',
-                                 help='number of supervised epochs.')
+                                 help='number of epochs to train')
     training_params.add_argument('--nb_batch', type=int, default=32,
                                  metavar='INT',
-                                 help='number of samples per batch.')
+                                 help='number of samples per batch')
+    training_params.add_argument('--supervised', default=False,
+                                 action='store_true',
+                                 help='if set, train as an ACGAN')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=100,
                               metavar='INT',
-                              help='dimensions in the latent vector.')
+                              help='dimensions in the latent vector')
+    model_params.add_argument('--save_path', type=str, metavar='STR',
+                              default='/tmp/mnist_gan.keras_model',
+                              help='Where to save the model after training')
 
-    optimizer_param = parser.add_argument_group('optimizer params')
-    optimizer_param.add_argument('--lr', type=float, default=0.0002,
-                                 metavar='FLOAT',
-                                 help='learning rate for Adam optimizer.')
-    optimizer_param.add_argument('--beta', type=float, default=0.5,
-                                 metavar='FLOAT',
-                                 help='beta 1 for Adam optimizer.')
+    optimizer_params = parser.add_argument_group('optimizer params')
+    optimizer_params.add_argument('--lr', type=float, default=0.0002,
+                                  metavar='FLOAT',
+                                  help='learning rate for Adam optimizer')
+    optimizer_params.add_argument('--beta', type=float, default=0.5,
+                                  metavar='FLOAT',
+                                  help='beta 1 for Adam optimizer')
 
     args = parser.parse_args()
 
@@ -148,36 +151,21 @@ if __name__ == '__main__':
     optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
     model = gandlf.Model(build_generator(args.nb_latent),
                          build_discriminator())
-    model.compile(optimizer=optimizer, metrics=['accuracy'])
+    model.compile(optimizer=optimizer, loss={
+        'auxiliary': 'categorical_crossentropy',
+        'generator': gandlf.losses.negative_binary_crossentropy,
+        'discriminator': 'binary_crossentropy',
+    }, metrics=['accuracy'])
 
-    # Gets data.
+    # Gets training and testing data.
     (X_train, y_train), (_, _) = get_mnist_data()
+    y_train_ohe = np.eye(10)[np.squeeze(y_train)]
 
-    unsup_inputs = {
-        'latent': 'normal',
-        'real': X_train,
-        'class': y_train
-    }
-
-    sup_inputs = {
-        'latent': 'normal',
-        'real': X_train,
-        'class': y_train,
-    }
-    sup_outputs = {
-        'auxiliary': np.eye(10)[np.squeeze(y_train)]  # One-hot encoded.
-    }
-
-    # print(model.sample({'latent': 'normal', 'class': y_train}, 10))
-
-    # Fits data to unsupervised GAN.
-    print('Starting unsupervised GAN training.')
-    model.fit(unsup_inputs,
-              nb_epoch=args.nb_unsup_epoch,
+    model.fit({'latent': 'normal', 'class': y_train, 'real': X_train},
+              {'generator': 'ones', 'discriminator': 'zeros',
+               'auxiliary': y_train_ohe},
+              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
 
-    # Fits data to supervised GAN.
-    print('Starting supervised GAN training.')
-    model.fit(sup_inputs, sup_outputs,
-              nb_epoch=args.nb_sup_epoch,
-              batch_size=args.nb_batch)
+    model.save(args.save_path)
+    print('Saved model:', args.save_path)
