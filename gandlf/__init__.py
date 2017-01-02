@@ -1,5 +1,9 @@
 from __future__ import absolute_import
+from . import losses
+from . import models
 
-from .models import *
+# Special imports.
+from .models import Model
 
-__version__ = '0.1'
+
+__version__ = '0.0.1'
