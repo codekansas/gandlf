@@ -21,7 +21,7 @@ On the Cartesian plane, the classes are:
                |
             --- ---
                |
-             1 | 0
+             0 | 1
                |
 
 To show all command line options:
