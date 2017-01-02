@@ -1,16 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Hello gandlf!
+Hello Gandlf!
 
 This example trains the GAN to approximate four normal distributions centered
 around (-1, -1), (-1, 1), (1, -1) and (1, 1). It can be trained as a vanilla
 GAN or as an Auxiliary Classifier GAN, where it learns to classify the
-distributions according to the XOR.
+which distribution it is part of.
 
-The model doesn't work super well (it is hard to get the generator to equally
-distribute among the four distributions) but it is a good proof-of-concept
-that can be run quickly on a single CPU.
+The model doesn't work super well as a vanilla GAN (it is hard to get the
+generator to equally distribute among the four distributions) but it is a
+good proof-of-concept that can be run quickly on a single CPU. Adding the
+supervised part explicitly tells the GAN which distribution a point should
+come from, which makes it work much better.
+
+On the Cartesian plane, the classes are:
+
+               |
+             2 | 3
+               |
+            --- ---
+               |
+             1 | 0
+               |
 
 To show all command line options:
 
@@ -36,15 +48,16 @@ np.random.seed(1667)
 def get_training_data(num_samples):
     """Generates some training data."""
 
+    # As (x, y) Cartesian coordinates.
     x = np.random.randint(0, 2, size=(num_samples, 2))
 
-    y = np.logical_xor(x[:, 0], x[:, 1])
+    y = x[:, 0] + 2 * x[:, 1]  # 2-digit binary to integer.
     y = np.cast['int32'](y)
 
     x = np.cast['float32'](x) * 1.6 - 0.8  # Scales to [-1, 1].
     x += np.random.uniform(-0.2, 0.2, size=x.shape)
 
-    y_ohe = np.cast['float32'](np.eye(2)[y])
+    y_ohe = np.cast['float32'](np.eye(4)[y])
     y = np.cast['float32'](np.expand_dims(y, -1))
 
     return x, y, y_ohe
@@ -56,7 +69,7 @@ def build_generator(latent_size):
     latent_layer = keras.layers.Input((latent_size,))
     class_input = keras.layers.Input((1,))
 
-    embeddings = keras.layers.Embedding(2, latent_size, 'glorot_normal')
+    embeddings = keras.layers.Embedding(4, latent_size, 'glorot_normal')
     flat_embedded = keras.layers.Flatten()(embeddings(class_input))
 
     input_layer = keras.layers.merge([latent_layer, flat_embedded], mode='mul')
@@ -79,7 +92,7 @@ def build_discriminator():
     real_fake = keras.layers.Dense(1)(hidden_layer)
     real_fake = keras.layers.Activation('sigmoid', name='src')(real_fake)
 
-    class_pred = keras.layers.Dense(2)(hidden_layer)
+    class_pred = keras.layers.Dense(4)(hidden_layer)
     class_pred = keras.layers.Activation('sigmoid', name='class')(class_pred)
 
     # The first output of this model (real_fake_pred) is treated as
