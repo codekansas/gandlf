@@ -4,5 +4,6 @@ theme: readthedocs
 pages:
 - Home: index.md
 - Examples:
-  - MNIST: examples/mnist.md
+  - XOR: examples/xor.md
+#   - MNIST: examples/mnist.md
 
