@@ -29,6 +29,8 @@ In no particular order:
 
 ## Issues Etiquette
 
+More examples would be awesome! If you use this for something, create a stand-alone script that can be run and I'll put it in the `examples` directory. Just create a pull request for it.
+
 If you encounter an error, I would really like to hear about it! But please raise an issue before creating a pull request, to discuss the error. There a number of resources available for discussion; here is a list, again in no particular order:
 
  - [/r/MachineLearning](https://www.reddit.com/r/MachineLearning/)
