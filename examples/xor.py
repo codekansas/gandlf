@@ -41,11 +41,11 @@ def get_training_data(num_samples):
     y = np.logical_xor(x[:, 0], x[:, 1])
     y = np.cast['int32'](y)
 
-    x = np.cast['float32'](x) * 2 - 1  # Scales to [-1, 1].
-    x += np.random.normal(scale=0.3, size=x.shape)  # Adds some random noise.
+    x = np.cast['float32'](x) * 1.6 - 0.8  # Scales to [-1, 1].
+    x += np.random.uniform(-0.2, 0.2, size=x.shape)
 
-    y_ohe = np.eye(2)[y]
-    y = np.expand_dims(y, -1)
+    y_ohe = np.cast['float32'](np.eye(2)[y])
+    y = np.cast['float32'](np.expand_dims(y, -1))
 
     return x, y, y_ohe
 
@@ -53,38 +53,38 @@ def get_training_data(num_samples):
 def build_generator(latent_size):
     """Builds a simple two-layer generator network."""
 
-    latent_layer = keras.layers.Input(shape=(latent_size,), name='latent')
-    class_input = keras.layers.Input(shape=(1,), name='class')
-    embedded = keras.layers.Embedding(2, latent_size,
-                                      init='glorot_normal')(class_input)
-    flat_embedded = keras.layers.Flatten()(embedded)
+    latent_layer = keras.layers.Input((latent_size,))
+    class_input = keras.layers.Input((1,))
 
-    input_layer = keras.layers.merge([latent_layer, flat_embedded],
-                                     mode='mul')
-    hidden_layer = keras.layers.Dense(16, activation='tanh')(input_layer)
+    embeddings = keras.layers.Embedding(2, latent_size, 'glorot_normal')
+    flat_embedded = keras.layers.Flatten()(embeddings(class_input))
+
+    input_layer = keras.layers.merge([latent_layer, flat_embedded], mode='mul')
+    hidden_layer = keras.layers.Dense(64)(input_layer)
+    hidden_layer = keras.layers.LeakyReLU()(hidden_layer)
     output_layer = keras.layers.Dense(2)(hidden_layer)
+    output_layer = keras.layers.Activation('tanh')(output_layer)
 
-    return keras.models.Model([latent_layer, class_input],
-                              output_layer, name='generator')
+    return keras.models.Model([latent_layer, class_input], [output_layer])
 
 
 def build_discriminator():
     """Builds a simple two-layer discriminator network."""
 
-    input_layer = keras.layers.Input(shape=(2,), name='real')
+    input_layer = keras.layers.Input((2,))
 
-    normalized = keras.layers.BatchNormalization()(input_layer)
-    hidden_layer = keras.layers.Dense(16, activation='tanh')(normalized)
+    hidden_layer = keras.layers.Dense(64)(input_layer)
+    hidden_layer = keras.layers.LeakyReLU()(hidden_layer)
 
-    real_fake_pred = keras.layers.Dense(1, activation='sigmoid',
-                                        name='real_fake')(hidden_layer)
-    class_pred = keras.layers.Dense(2, activation='sigmoid',
-                                    name='class')(hidden_layer)
+    real_fake = keras.layers.Dense(1)(hidden_layer)
+    real_fake = keras.layers.Activation('sigmoid', name='src')(real_fake)
+
+    class_pred = keras.layers.Dense(2)(hidden_layer)
+    class_pred = keras.layers.Activation('sigmoid', name='class')(class_pred)
 
     # The first output of this model (real_fake_pred) is treated as
     # the "real / fake" predictor.
-    return keras.models.Model(input_layer, [real_fake_pred, class_pred],
-                              name='discriminator')
+    return keras.models.Model([input_layer], [real_fake, class_pred])
 
 
 def train_model(args, x, y, y_ohe):
@@ -92,16 +92,31 @@ def train_model(args, x, y, y_ohe):
 
     model = gandlf.Model(build_generator(args.nb_latent),
                          build_discriminator())
-    model.compile(optimizer='adam', loss={
-        'class': 'categorical_crossentropy',
-        'fake': gandlf.losses.negative_binary_crossentropy,
-        'real': 'binary_crossentropy',
-    }, metrics=['accuracy'])
 
-    model.fit({'latent': 'normal', 'real': x, 'class': y},
-              {'fake': 'ones', 'real': 'zeros', 'class': y_ohe},
-              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
-              batch_size=args.nb_batch)
+    # This part illustrates how to turn the auxiliary classifier on and off,
+    # if it is needed. This approach can also be used to pre-train the
+    # auxiliary parts of the discriminator.
+    if args.supervised:
+        loss_weights = {'src_real': 2., 'src_fake': 1.,
+                        'class_real': 2., 'class_fake': 1.}
+    else:
+        loss_weights = {'src_real': 2., 'src_fake': 1.,
+                        'class_real': 0., 'class_fake': 0.}
+
+    optimizer = keras.optimizers.adam(0.001)
+    model.compile(optimizer=optimizer, loss={
+        'src_real': 'binary_crossentropy',
+        'class_real': 'categorical_crossentropy',
+        'src_fake': 'binary_crossentropy',
+        'class_fake': 'categorical_crossentropy'
+    }, metrics=['accuracy'], loss_weights=loss_weights)
+
+    # Arguments don't just need to be passed as dictionaries. In this case,
+    # the outputs correspond to [src_fake, class_fake, src_real, class_real].
+    model.fit(['normal', y, x], ['zeros', y_ohe, 'ones', y_ohe],
+              nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
+
+    return model
 
 
 if __name__ == '__main__':
@@ -141,17 +156,18 @@ if __name__ == '__main__':
     print(x[:10])
 
     print('\n:: Target Data ::')
-    print(y[:10])
+    print(np.cast['int32'](y[:10]))
 
     if args.supervised:
         print('\n:: Predictions for Real Data ::')
-        print(np.argmax(model.predict({'real': x[:10]})[1], -1)
-              .reshape((-1, 1)))
+        preds = np.argmax(model.predict([x[:10]])[1], -1)
+        print(preds.reshape((-1, 1)))
 
     print('\n:: Generated Input Data (Knowing Target Data) ::')
-    p = model.sample({'latent': 'normal', 'class': y[:10]})
+    p = model.sample(['normal', y[:10]])
     print(p)
 
     if args.supervised:
         print('\n:: Predictions for Generated Data ::')
-        print(np.argmax(model.predict({'real': p})[1], -1).reshape((-1, 1)))
+        preds = np.argmax(model.predict([p])[1], -1)
+        print(preds.reshape((-1, 1)))

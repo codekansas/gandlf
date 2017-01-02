@@ -69,13 +69,7 @@ def get_batch(X, start=None, stop=None):
 class Model(keras_models.Model):
     """The core model for training GANs.
 
-    Building this model requires two Keras models, the "generator" and
-    "discriminator". The first output of the discriminator should be the
-    output that predicts if its inputs are real or fake. The other outputs
-    of the discriminator are treated as "auxiliary" outputs.
-
-    When the model is initiated, the first discriminator output is expanded
-    into two outputs, the "real" output and the "fake" output.
+    Both a generator and a discriminator are needed to build the model.
 
     Updates are calculated and applied to the generator and discriminator
     simultaneously. If the discriminator has auxiliary outputs, it can also
@@ -138,21 +132,18 @@ class Model(keras_models.Model):
             output=discriminator(generator.outputs),
             name='generator_around_discriminator')
 
-        # Copies the outputs of the combined model, with two of the first
-        # output (since the first output should be the true / false
-        # prediction).
-        inputs = generator_discriminator.inputs
-        outputs = (generator_discriminator.outputs[:1] +
-                   generator_discriminator.outputs)
-
-        self.num_outputs = (len(generator.outputs), len(discriminator.outputs))
+        inputs = generator_discriminator.inputs + discriminator.inputs
+        outputs = generator_discriminator.outputs + discriminator.outputs
 
         # The model is treated as the generator by Keras.
         super(Model, self).__init__(inputs, outputs, name)
 
         # Copies the output names from the discriminator.
-        self.output_names = (['real', 'fake'] +
-                             self.discriminator.output_names[1:])
+        self.input_names = generator.input_names + discriminator.input_names
+
+        discriminator_names = self.discriminator.output_names
+        self.output_names = ['%s_fake' % name for name in discriminator_names]
+        self.output_names += ['%s_real' % name for name in discriminator_names]
 
     def _check_generator_and_discriminator(self, generator, discriminator):
         """Validates the provided models in a user-friendly way."""
@@ -165,22 +156,21 @@ class Model(keras_models.Model):
                              'generator=%s' % (type(discriminator),
                                                type(generator)))
 
-        # Checks that the discriminator has at least one output.
-        if len(discriminator.outputs) == 0:
-            raise ValueError('The discriminator model must have at least '
-                             'one output (the True / False output).')
-
-        # Checks that only the first discriminator output is binary.
-        discriminator_outputs = discriminator.inbound_nodes[0].output_shapes
-        if discriminator_outputs[0][-1] != 1:
-            raise ValueError('The first output of the discriminator model '
-                             'should be binary (decides if the input sample '
-                             'is real or fake). It actually has %d outputs.' %
-                             discriminator_outputs[0][-1])
-
         if len(generator.outputs) != len(discriminator.inputs):
             raise ValueError('The discriminator model should have one input '
                              'per output of the generator model.')
+
+        # Checks that the input and output shapes line up.
+        generator_shapes = generator.inbound_nodes[0].output_shapes
+        discriminator_shapes = discriminator.inbound_nodes[0].input_shapes
+
+        if any(g != d for g, d in zip(generator_shapes, discriminator_shapes)):
+            raise ValueError('The discriminator input shapes should be the '
+                             'same as the generator output shapes. The '
+                             'discriminator has inputs %s while the '
+                             'generator has outputs %s.' %
+                             (str(discriminator_shapes),
+                              str(generator_shapes)))
 
     def _sort_weights_by_name(self, weights):
         """Sorts weights by name and returns them."""
@@ -196,18 +186,6 @@ class Model(keras_models.Model):
         weights.sort(key=key)
         return weights
 
-    def _compute_loss(self, index, masks, loss_weights):
-        """Computes loss for a single output."""
-
-        y_true = self.targets[index]
-        y_pred = self.outputs[index]
-        weighted_loss = training.weighted_objective(self.loss_functions[index])
-        sample_weight = self.sample_weights[index]
-        mask = masks[index]
-        loss_weight = loss_weights[index]
-        output_loss = weighted_loss(y_true, y_pred, sample_weight, mask)
-        return loss_weight * output_loss
-
     def _compute_losses(self):
         """Computes generator and discriminator losses."""
 
@@ -221,25 +199,38 @@ class Model(keras_models.Model):
         # Recomputes the loss weights list (done in the parent compile method).
         if self.loss_weights is None:
             loss_weights = [1. for _ in self.outputs]
-        elif isinstance(loss_weights, dict):
-            loss_weights = [loss_weights.get(name, 1.)
+        elif isinstance(self.loss_weights, dict):
+            loss_weights = [self.loss_weights.get(name, 1.)
                             for name in self.output_names]
         else:
-            loss_weights = list(loss_weights)
+            loss_weights = list(self.loss_weights)
 
-        # The generator loss is the first index.
-        self.generator_loss = self._compute_loss(0, masks, loss_weights)
+        def _compute_loss(index, y_pred):
+            """Computes loss for a single output."""
 
-        # The discriminator loss is the second index.
-        self.discriminator_loss = self._compute_loss(1, masks, loss_weights)
+            y_true = self.targets[index]
+            weighted_loss = training.weighted_objective(
+                self.loss_functions[index])
+            sample_weight = self.sample_weights[index]
+            mask = masks[index]
+            loss_weight = loss_weights[index]
+            output_loss = weighted_loss(y_true, y_pred, sample_weight, mask)
+            return loss_weight * output_loss
 
-        # Auxiliary loss is all the other losses.
-        auxiliary_loss = None
-        for index in range(2, len(self.outputs)):
-            index_loss = self._compute_loss(index, masks, loss_weights)
-            auxiliary_loss = (index_loss if auxiliary_loss is None
-                              else auxiliary_loss + index_loss)
-        self.auxiliary_loss = auxiliary_loss
+        # The generator trains generated -> real.
+        num_discrim_outputs = len(self.discriminator.outputs)
+        self.generator_loss = None
+        for i in range(num_discrim_outputs):
+            loss = _compute_loss(i + num_discrim_outputs, self.outputs[i])
+            self.generator_loss = (loss if self.generator_loss is None
+                                   else loss + self.generator_loss)
+
+        # The discriminator trains real -> real and generated -> fake.
+        self.discriminator_loss = None
+        for i in range(len(self.outputs)):
+            loss = _compute_loss(i, self.outputs[i])
+            self.discriminator_loss = (loss if self.discriminator_loss is None
+                                       else loss + self.discriminator_loss)
 
     def compile(self, optimizer, loss, metrics=None, loss_weights=None,
                 sample_weight_mode=None, **kwargs):
@@ -297,7 +288,12 @@ class Model(keras_models.Model):
             return []
 
     def _get_clean_updates(self, params, loss):
-        """Uses optimizer to get weight updates, removing unconnected parts."""
+        """Returns cleaned updates.
+
+        This is necessary when there are weights specific to a particular
+        output, and therefore have no gradient with respect to some of the
+        losses (so when the model tries to apply updates it will fail).
+        """
 
         grads = self.optimizer.get_gradients(loss, params)
         new_params = [param
@@ -306,69 +302,36 @@ class Model(keras_models.Model):
 
         return self.optimizer.get_updates(new_params, self.constraints, loss)
 
-    def _make_non_auxiliary_train_function(self):
-        """Builds the non-auxiliary train function."""
-
-        if not hasattr(self, 'non_auxiliary_train_function'):
-            raise RuntimeError('You must compile your model before using it.')
-
-        if self.non_auxiliary_train_function is None:
-
-            # Collects inputs to the function.
-            inputs = (self.inputs +
-                      self.discriminator.inputs +
-                      self.targets +
-                      self.sample_weights +
-                      self._get_learning_phase())
-
-            # Gets the generator updates.
-            generator_updates = self._get_clean_updates(
-                self._collected_trainable_weights[0],
-                self.generator_loss)
-
-            # Gets the discriminator updates.
-            discriminator_updates = self._get_clean_updates(
-                self._collected_trainable_weights[1],
-                self.discriminator_loss)
-
-            updates = generator_updates + discriminator_updates + self.updates
-
-            # Returns loss and metrics. Updates weights at each call.
-            self.non_auxiliary_train_function = K.function(
-                inputs,
-                [self.total_loss] + self.metrics_tensors,
-                updates=updates,
-                **self._function_kwargs)
-
-    def _make_auxiliary_train_function(self):
+    def _make_train_function(self):
         """Builds the auxiliary train function."""
 
-        if not hasattr(self, 'auxiliary_train_function'):
+        if not hasattr(self, 'train_function'):
             raise RuntimeError('You must compile your model before using it.')
 
-        if self.auxiliary_train_function is None:
+        if self.train_function is None:
 
             # Collects inputs to the function.
             inputs = (self.inputs +
-                      self.discriminator.inputs +
                       self.targets +
                       self.sample_weights +
                       self._get_learning_phase())
 
             # Gets the generator updates.
-            generator_updates = self._get_clean_updates(
+            generator_updates = self.optimizer.get_updates(
                 self._collected_trainable_weights[0],
+                self.constraints,
                 self.generator_loss)
 
             # Gets the discriminator updates.
-            discriminator_updates = self._get_clean_updates(
+            discriminator_updates = self.optimizer.get_updates(
                 self._collected_trainable_weights[1],
-                self.discriminator_loss + self.auxiliary_loss)
+                self.constraints,
+                self.discriminator_loss)
 
             updates = (generator_updates + discriminator_updates +
                        self.updates)
 
-            self.auxiliary_train_function = K.function(
+            self.train_function = K.function(
                 inputs,
                 [self.total_loss] + self.metrics_tensors,
                 updates=updates,
@@ -404,9 +367,9 @@ class Model(keras_models.Model):
                 elif array == 'uniform':
                     array = lambda b: np.random.uniform(size=(b,) + shape_no_b)
                 elif array == 'ones' or array == 'one' or array == '1':
-                    array = np.ones(shape=(nb_train_samples,) + shape[1:])
+                    array = np.ones(shape=(nb_train_samples,) + shape_no_b)
                 elif array == 'zeros' or array == 'zero' or array == '0':
-                    array = np.zeros(shape=(nb_train_samples,) + shape[1:])
+                    array = np.zeros(shape=(nb_train_samples,) + shape_no_b)
                 else:
                     raise ValueError('Error when checking %s:'
                                      'Invalid data type string: %s'
@@ -527,7 +490,7 @@ class Model(keras_models.Model):
             self.sample_function = None
 
         if self.sample_function is None:
-            inputs = self.inputs + self._get_learning_phase()
+            inputs = self.generator.inputs + self._get_learning_phase()
             outputs = self.generator.outputs
             kwargs = getattr(self, '_function_kwargs', {})
             self.sample_function = K.function(inputs, outputs,
@@ -553,8 +516,8 @@ class Model(keras_models.Model):
             A Numpy array of samples from the generator.
         """
 
-        input_names = self.input_names
-        input_shapes = self.internal_input_shapes
+        input_names = self.generator.input_names
+        input_shapes = self.generator.internal_input_shapes
 
         x = self._convert_input_to_list(x, input_names)
 
@@ -654,10 +617,9 @@ class Model(keras_models.Model):
         return self._predict_loop(f, ins, batch_size=batch_size,
                                   verbose=verbose)
 
-    def fit(self, x, y, train_auxiliary=False, batch_size=32, nb_epoch=10,
-            verbose=1, callbacks=None, validation_split=0.,
-            validation_data=None, shuffle=True, class_weight=None,
-            sample_weight=None, initial_epoch=0):
+    def fit(self, x, y, batch_size=32, nb_epoch=10, verbose=1, callbacks=None,
+            validation_split=0., validation_data=None, shuffle=True,
+            class_weight=None, sample_weight=None, initial_epoch=0):
         """Trains the model for a fixed number of epochs (iterations on data).
 
         Args:
@@ -668,9 +630,6 @@ class Model(keras_models.Model):
                 batch size and returns an array with that batch size.
                 These values are the inputs of the model.
             y: same types as x, the targets of the model.
-            train_auxiliary: bool. If False, the model only trains the real /
-                fake predictor. If True, the auxiliary outputs are also
-                trained.
             batch_size: integer, the number of samples per gradient update.
             nb_epoch: integer, the number of times to iterate over the
                 training data arrays.
@@ -711,22 +670,17 @@ class Model(keras_models.Model):
             raise NotImplementedError('Validation sets are not yet '
                                       'implemented for gandlf models.')
 
-        input_names = (self.input_names +
-                       self.discriminator.input_names)
-        input_shapes = (self.internal_input_shapes +
-                        self.discriminator.internal_input_shapes)
+        input_names = self.input_names
+        input_shapes = self.internal_input_shapes
         output_names = self.output_names
         output_shapes = self.internal_output_shapes
 
         x, y, sample_weights, nb_train_samples = self._standardize_user_data(
             x, y, sample_weight, class_weight, input_names, input_shapes,
             output_names, output_shapes, False, batch_size)
-        if train_auxiliary:
-            self._make_auxiliary_train_function()
-            train_fn = self.auxiliary_train_function
-        else:
-            self._make_non_auxiliary_train_function()
-            train_fn = self.non_auxiliary_train_function
+
+        self._make_train_function()
+        train_fn = self.train_function
 
         if self._get_learning_phase():
             ins = x + y + sample_weights + [1.]
@@ -824,6 +778,3 @@ class Model(keras_models.Model):
 
     def _make_test_function(self):
         raise NotImplementedError()  # TODO: Implement this properly.
-
-    def _make_train_function(self):
-        raise NotImplementedError()  # TODO: Fix this (some dependencies).
