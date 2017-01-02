@@ -50,10 +50,10 @@ model.compile(optimizer='adam', loss='binary_crossentropy')
 
 # Latent vector is fed data from a random normal distribution.
 # <input_data> represents the real data.
-# 'zeros' and 'ones' represent 'real' and 'fake', respectively.
-# In this case, the discriminator learns 'real data' -> 0
-# and 'generated data' -> 1, while the generator learns
-# 'generated data' -> 0.
+# 'zeros' and 'ones' represent 'fake' and 'real', respectively.
+# In this case, the discriminator learns 'real data' -> 1
+# and 'generated data' -> 0, while the generator learns
+# 'generated data' -> 1.
 model.fit(['normal', <input_data>], ['zeros', 'ones'])
 
 # The model provides a function for predicting the discriminator's
