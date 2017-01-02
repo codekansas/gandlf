@@ -15,10 +15,6 @@ model.
 To show all command line options:
 
     ./examples/xor.py --help
-
-The model runs in unsupervised mode by default. To run as an ACGAN:
-
-    ./examples/xor.py --supervised
 """
 
 from __future__ import print_function
@@ -60,8 +56,8 @@ def build_generator(latent_size):
                                        activation='tanh', init='glorot_normal'))
 
     latent = keras.layers.Input(shape=(latent_size,), name='latent')
-
-    image_class = keras.layers.Input(shape=(1,), dtype='int32', name='class')
+    image_class = keras.layers.Input(shape=(1,), dtype='int32',
+                                     name='image_class')
 
     embedded = keras.layers.Embedding(10, latent_size,
                                       init='glorot_normal')(image_class)
@@ -102,12 +98,12 @@ def build_discriminator():
 
     cnn.add(keras.layers.Flatten())
 
-    image = keras.layers.Input(shape=(1, 28, 28), name='real')
+    image = keras.layers.Input(shape=(1, 28, 28), name='real_data')
 
     features = cnn(image)
 
     fake = keras.layers.Dense(1, activation='sigmoid',
-                              name='generation')(features)
+                              name='src')(features)
     aux = keras.layers.Dense(10, activation='softmax',
                              name='class')(features)
 
@@ -129,6 +125,28 @@ def get_mnist_data():
     return (X_train, y_train), (X_test, y_test)
 
 
+def train_model(args, X_train, y_train, y_train_ohe):
+
+    optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
+    model = gandlf.Model(build_generator(args.nb_latent),
+                         build_discriminator())
+
+    model.compile(optimizer=optimizer, loss={
+        'class_real': 'categorical_crossentropy',
+        'class_fake': 'categorical_crossentropy',
+        'src_real': gandlf.losses.negative_binary_crossentropy,
+        'src_fake': 'binary_crossentropy',
+    }, metrics=['accuracy'])
+
+    model.fit({'latent': 'normal', 'image_class': y_train,
+               'real_data': X_train},
+              {'src_fake': 'zeros', 'src_real': 'ones',
+               'class_real': y_train_ohe, 'class_fake': y_train_ohe},
+              nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
+
+    return model
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Auxiliary Classifier GAN for MNIST digits.')
@@ -140,9 +158,6 @@ if __name__ == '__main__':
     training_params.add_argument('--nb_batch', type=int, default=32,
                                  metavar='INT',
                                  help='number of samples per batch')
-    training_params.add_argument('--supervised', default=False,
-                                 action='store_true',
-                                 help='if set, train as an ACGAN')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=100,
@@ -162,24 +177,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Builds the model itself.
-    optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
-    model = gandlf.Model(build_generator(args.nb_latent),
-                         build_discriminator())
-    model.compile(optimizer=optimizer, loss={
-        'class': 'categorical_crossentropy',
-        'real': gandlf.losses.negative_binary_crossentropy,
-        'fake': 'binary_crossentropy',
-    }, metrics=['accuracy'])
-
     # Gets training and testing data.
     (X_train, y_train), (_, _) = get_mnist_data()
+
+    # Turns digit labels into one-hot encoded labels.
     y_train_ohe = np.eye(10)[np.squeeze(y_train)]
 
-    model.fit({'latent': 'normal', 'class': y_train, 'real': X_train},
-              {'fake': 'ones', 'real': 'zeros', 'class': y_train_ohe},
-              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
-              batch_size=args.nb_batch)
+    model = train_model(args, X_train, y_train, y_train_ohe)
 
     model.save(args.save_path)
     print('Saved model:', args.save_path)
