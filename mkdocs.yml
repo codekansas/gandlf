@@ -1,4 +1,7 @@
 site_name: gandlf
+site_description: "Gandlf: Generative Adversarial Networks in Keras"
+site_author: Benjamin Bolte
+repo_url: https://github.com/codekansas/gandlf
 theme: readthedocs
 
 pages:
