@@ -153,8 +153,8 @@ if __name__ == '__main__':
                          build_discriminator())
     model.compile(optimizer=optimizer, loss={
         'class': 'categorical_crossentropy',
-        'generator': gandlf.losses.negative_binary_crossentropy,
-        'discriminator': 'binary_crossentropy',
+        'real': gandlf.losses.negative_binary_crossentropy,
+        'fake': 'binary_crossentropy',
     }, metrics=['accuracy'])
 
     # Gets training and testing data.
@@ -162,8 +162,7 @@ if __name__ == '__main__':
     y_train_ohe = np.eye(10)[np.squeeze(y_train)]
 
     model.fit({'latent': 'normal', 'class': y_train, 'real': X_train},
-              {'generator': 'ones', 'discriminator': 'zeros',
-               'class': y_train_ohe},
+              {'fake': 'ones', 'real': 'zeros', 'class': y_train_ohe},
               train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
 

@@ -1,3 +1,5 @@
+"""The core GAN model, which abstracts manual training."""
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -8,12 +10,13 @@ from keras import models as keras_models
 from keras.engine import training
 import six
 
-from gandlf import losses
 import keras.backend as K
 import numpy as np
 
 
 def _as_list(x):
+    """Converts an object to a list."""
+
     if x is None:
         return []
     elif isinstance(x, (list, tuple, set)):
@@ -22,16 +25,9 @@ def _as_list(x):
         return [x]
 
 
-def _as_set(x):
-    if x is None:
-        return set()
-    elif isinstance(x, (list, tuple, set)):
-        return set(x)
-    else:
-        return set([x])
-
-
 def is_numpy_array(x):
+    """Returns True if an object is a Numpy array."""
+
     return type(x).__module__ == np.__name__
 
 
@@ -71,9 +67,67 @@ def get_batch(X, start=None, stop=None):
 
 
 class Model(keras_models.Model):
-    """TODO: Docstring."""
+    """The core model for training GANs.
+
+    Building this model requires two Keras models, the "generator" and
+    "discriminator". The first output of the discriminator should be the
+    output that predicts if its inputs are real or fake. The other outputs
+    of the discriminator are treated as "auxiliary" outputs.
+
+    When the model is initiated, the first discriminator output is expanded
+    into two outputs, the "real" output and the "fake" output.
+
+    Updates are calculated and applied to the generator and discriminator
+    simultaneously. If the discriminator has auxiliary outputs, it can also
+    be trained to minimize the auxiliary loss, by setting `train_auxiliary`
+    in the `fit` function. This makes it easy to train the model in both
+    a supervised and unsupervised fashion.
+
+    Like how a cup of tea is needed to calculate improbability factors,
+    a source of randomness is usually necessary to train GANs. To make it
+    easier to add random inputs, you can specify the type of random input
+    rather than explicitly providing them. At runtime, the model will
+    generate new normal random variables with the right input shape and
+    feed them to the correct model input. This can be done with any
+    normal Keras input.
+
+    Below is a bare-bones example of training a model. For more examples,
+    see the `examples` folder associated with this project.
+
+        latent_vec = keras.layers.Input(shape=..., name='latent_vec')
+        generated = some_function_of(latent_vec)
+
+        data = keras.layers.Input(shape=..., name='data')
+        real_fake = some_function_of(data)  # Binary; has shape (..., 1).
+
+        generator = keras.models.Model(input=[latent_vec], output=[generated])
+        discriminator = keras.models.Model(input=[data], output=[real_fake])
+
+        model = gandlf.Model(generator, discriminator)
+        model.compile(...)
+
+        model.fit({'latent_vec': 'normal', 'data': real_data},
+                  {'real': 'ones', 'fake': 'zeros'})
+
+        # Provides samples from the generator model.
+        sample = model.sample({'latent_vec': 'normal'}, num_samples=10)
+
+        # Predicts if some input data is real or fake. If there were auxiliary
+        # outputs, it would also return the predictions for those outputs.
+        preds = model.predict({'data': input_data}, ...)
+    """
 
     def __init__(self, generator, discriminator, name=None):
+        """Initializer for the GANDLF model.
+
+        Args:
+            generator: a Keras model that generates outputs.
+            discriminator: a Keras model that has one input for every output
+                of the generator model, and has at least one output, where
+                the first output if a binary real / fake prediction.
+            name: str (optional), the name for this model.
+        """
+
         self._check_generator_and_discriminator(generator, discriminator)
 
         self.generator = generator
@@ -97,7 +151,7 @@ class Model(keras_models.Model):
         super(Model, self).__init__(inputs, outputs, name)
 
         # Copies the output names from the discriminator.
-        self.output_names = (['generator', 'discriminator'] +
+        self.output_names = (['real', 'fake'] +
                              self.discriminator.output_names[1:])
 
     def _check_generator_and_discriminator(self, generator, discriminator):
@@ -189,7 +243,31 @@ class Model(keras_models.Model):
 
     def compile(self, optimizer, loss, metrics=None, loss_weights=None,
                 sample_weight_mode=None, **kwargs):
-        """TODO: Docstring."""
+        """Configures the model for training.
+
+        # Args:
+            optimizer: str (name of optimizer) or optimizer object.
+                See Keras [optimizers](https://keras.io/optimizers/).
+            loss: str (name of objective function) or objective function.
+                More objective functions can be found under gandlf.losses.
+                See Keras [objectives](https://keras.io/objectives/).
+                It is almost always a good idea to use binary crossentropy
+                loss for the real / fake prediction. To use a different
+                loss for the auxiliary outputs, provide them as a list or
+                dictionary.
+            metrics: list of metrics to be evaluated by the model during
+                training and testing. Typically you will use `metrics=['acc']`
+                to calculate accuracy. To specify different metrics for
+                different outputs, you could also pass a dictionary, such as
+                `metrics={'real': 'accuracy', 'fake': 'accuracy', ...}`.
+            sample_weight_mode: if you need to do timestep-wise sample
+                weighting (2D weights), set this to "temporal". "None" defaults
+                to sample-wise weights (1D). If the model has multiple outputs,
+                you can use a different `sample_Weight_mode` on each output by
+                passing a dictionary or list of modes.
+            kwargs: extra arguments that are passed to the Theano backend (not
+                used by Tensorflow).
+        """
 
         # Call the "parent" compile method.
         super(Model, self).compile(optimizer=optimizer,
@@ -457,7 +535,23 @@ class Model(keras_models.Model):
                                               **kwargs)
 
     def sample(self, x, num_samples=None, batch_size=32, verbose=0):
-        """TODO: Docstring."""
+        """Samples from the generator using the given inputs in batches.
+
+        Args:
+            x: single input, list of inputs, or dictionary of (str, input)
+                pairs where the key is the input name. The input can either be
+                a Numpy array, a string specifying a type (one of "normal",
+                "uniform", "zeros", or "ones"), or a function that takes a
+                batch size and returns an array with that batch size.
+            num_samples: if none of the inputs are Numpy arrays with explicit
+                sample sizes, this should be set to determine the number of
+                samples to return. It overrides the sample size of any arrays.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
+
+        Returns:
+            A Numpy array of samples from the generator.
+        """
 
         input_names = self.input_names
         input_shapes = self.internal_input_shapes
@@ -468,12 +562,16 @@ class Model(keras_models.Model):
         if num_samples is None:
             for arr in x:
                 if is_numpy_array(arr):
-                    num_samples = arr.shape[0]
-                    break
-            else:
-                raise ValueError('None of the model inputs have an explicit '
-                                 'batch size, so it must be specified in '
-                                 'num_samples.')
+                    if num_samples is None:
+                        num_samples = arr.shape[0]
+                    else:
+                        raise ValueError('Multiple arrays were found with '
+                                         'conflicting sample sizes.')
+
+        if num_samples is None:
+            raise ValueError('None of the model inputs have an explicit '
+                             'sample size, so it must be specified in '
+                             'num_samples.')
 
         x = self._standardize_input_data(
             x, input_names, input_shapes, num_samples,
@@ -507,7 +605,21 @@ class Model(keras_models.Model):
                                                **kwargs)
 
     def predict(self, x, num_samples=None, batch_size=32, verbose=0):
-        """TODO: Docstring."""
+        """Runs the discriminator on a sample and returns all its outputs.
+
+        Args:
+            x: single input, list of inputs, or dictionary of (str, input)
+                pairs where the key is the input name. The input can either be
+                a Numpy array, a string specifying a type (one of "normal",
+                "uniform", "zeros", or "ones"), or a function that takes a
+                batch size and returns an array with that batch size.
+            batch_size: integer.
+            verbose: verbosity mode, 0 or 1.
+
+        Returns:
+            A Numpy array of predictions, where the first is the real / fake
+            prediction, and all others are auxiliary outputs.
+        """
 
         input_names = self.discriminator.input_names
         input_shapes = self.discriminator.internal_input_shapes
@@ -546,7 +658,54 @@ class Model(keras_models.Model):
             verbose=1, callbacks=None, validation_split=0.,
             validation_data=None, shuffle=True, class_weight=None,
             sample_weight=None, initial_epoch=0):
-        """TODO: Docstring."""
+        """Trains the model for a fixed number of epochs (iterations on data).
+
+        Args:
+            x: single input, list of inputs, or dictionary of (str, input)
+                pairs where the key is the input name. The input can either be
+                a Numpy array, a string specifying a type (one of "normal",
+                "uniform", "zeros", or "ones"), or a function that takes a
+                batch size and returns an array with that batch size.
+                These values are the inputs of the model.
+            y: same types as x, the targets of the model.
+            train_auxiliary: bool. If False, the model only trains the real /
+                fake predictor. If True, the auxiliary outputs are also
+                trained.
+            batch_size: integer, the number of samples per gradient update.
+            nb_epoch: integer, the number of times to iterate over the
+                training data arrays.
+            verbose: 0, 1, or 2, the verbosity mode.
+                0 = silent, 1 = verbose, 2 = one log line per epoch.
+            callbacks: list of callbacks to be called during training.
+                See Keras [callbacks](https://keras.io/callbacks/).
+            validation_split: float between 0 and 1: fraction of training data.
+                The model will set apart this fraction of the training data,
+                will not train on it, and will evaluate the loss and any model
+                metrics on this data at the end of each epoch.
+            validation_data: data on which to evaluate the los and any model
+                metrics at the end of each epoch. The model will not be trained
+                on this data. This could be a tuple (x_val, y_val) or a tuple
+                (x_val, y_val, val_sample_weights).
+            shuffle: boolean, whether to shuffle the training data before
+                each epoch.
+            class_weight: optional dictionary mapping class indices (integers)
+                a weight (float) to apply to the model's loss for the samples
+                from this class during training. This can be useful to tell
+                the model to "pay more attention" to samples from an
+                under-represented class.
+            sample_weight: optional array of the same length as x, containing
+                weights to apply to the model's loss for each sample. In the
+                case of temporal data, you can pass a 2D array with shape
+                (sample, sequence_length), to apply a different weight to
+                every timestep of each sample. In this case you should make
+                sure to specify sample_weight_mode="temporal" in compile().
+            initial_epoch: epoch at which to start training (useful for
+                resuming a previous training run).
+
+        Returns:
+            A "History" instance. Its `history` attribute contains all
+            information collected during training.
+        """
 
         if validation_split or validation_data:
             raise NotImplementedError('Validation sets are not yet '
@@ -588,7 +747,7 @@ class Model(keras_models.Model):
     def _fit_loop(self, f, ins, nb_train_samples, out_labels=None,
                   batch_size=32, nb_epoch=100, verbose=1, callbacks=None,
                   shuffle=True, callback_metrics=None, initial_epoch=0):
-        """TODO: Docstring."""
+        """The core loop that fits the data."""
 
         index_array = np.arange(nb_train_samples)
 

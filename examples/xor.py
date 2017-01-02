@@ -88,8 +88,8 @@ if __name__ == '__main__':
                          build_discriminator())
     model.compile(optimizer='adam', loss={
         'class': 'categorical_crossentropy',
-        'generator': gandlf.losses.negative_binary_crossentropy,
-        'discriminator': 'binary_crossentropy',
+        'fake': gandlf.losses.negative_binary_crossentropy,
+        'real': 'binary_crossentropy',
     }, metrics=['accuracy'])
 
     x, y = get_training_data(args.nb_samples)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     y = np.expand_dims(y, -1)
 
     model.fit({'latent': 'normal', 'real': x, 'class': y},
-              {'generator': 'ones', 'discriminator': 'zeros', 'class': y_ohe},
+              {'fake': 'ones', 'real': 'zeros', 'class': y_ohe},
               train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
               batch_size=args.nb_batch)
 
