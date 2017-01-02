@@ -1,4 +1,25 @@
-"""TODO: Docstring."""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Train an Auxiliary Classifier Generative Adversarial Network (ACGAN) on the
+MNIST dataset. See https://arxiv.org/abs/1610.09585 for more detals.
+
+This example is based on the Keras example, which uses the same generator and
+discriminator model. It can be found at:
+
+https://github.com/fchollet/keras/blob/master/examples/mnist_acgan.py
+
+Consult https://github.com/lukedeo/keras-acgan for more information about the
+model.
+
+To show all command line options:
+
+    ./examples/xor.py --help
+
+The model runs in unsupervised mode by default. To run as an ACGAN:
+
+    ./examples/xor.py --supervised
+"""
 
 from __future__ import print_function
 
@@ -19,10 +40,7 @@ keras.backend.set_image_dim_ordering('th')
 
 
 def build_generator(latent_size):
-    """Builds generator model.
-
-    TODO: Improve docstring.
-    """
+    """Builds the generator model."""
 
     cnn = keras.models.Sequential()
 
@@ -57,10 +75,7 @@ def build_generator(latent_size):
 
 
 def build_discriminator():
-    """Builds the discriminator model.
-
-    TODO: Improve docstring.
-    """
+    """Builds the discriminator model."""
 
     cnn = keras.models.Sequential()
 

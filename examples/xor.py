@@ -1,4 +1,25 @@
-"""TODO: Docstring."""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Hello gandlf!
+
+This example trains the GAN to approximate four normal distributions centered
+around (-1, -1), (-1, 1), (1, -1) and (1, 1). It can be trained as a vanilla
+GAN or as an Auxiliary Classifier GAN, where it learns to classify the
+distributions according to the XOR.
+
+The model doesn't work super well (it is hard to get the generator to equally
+distribute among the four distributions) but it is a good proof-of-concept
+that can be run quickly on a single CPU.
+
+To show all command line options:
+
+    ./examples/xor.py --help
+
+The model runs in unsupervised mode by default. To run as an ACGAN:
+
+    ./examples/xor.py --supervised
+"""
 
 from __future__ import print_function
 
@@ -23,10 +44,15 @@ def get_training_data(num_samples):
     x = np.cast['float32'](x) * 2 - 1  # Scales to [-1, 1].
     x += np.random.normal(scale=0.3, size=x.shape)  # Adds some random noise.
 
-    return x, y
+    y_ohe = np.eye(2)[y]
+    y = np.expand_dims(y, -1)
+
+    return x, y, y_ohe
 
 
 def build_generator(latent_size):
+    """Builds a simple two-layer generator network."""
+
     latent_layer = keras.layers.Input(shape=(latent_size,), name='latent')
     class_input = keras.layers.Input(shape=(1,), name='class')
     embedded = keras.layers.Embedding(2, latent_size,
@@ -43,6 +69,8 @@ def build_generator(latent_size):
 
 
 def build_discriminator():
+    """Builds a simple two-layer discriminator network."""
+
     input_layer = keras.layers.Input(shape=(2,), name='real')
 
     normalized = keras.layers.BatchNormalization()(input_layer)
@@ -57,6 +85,23 @@ def build_discriminator():
     # the "real / fake" predictor.
     return keras.models.Model(input_layer, [real_fake_pred, class_pred],
                               name='discriminator')
+
+
+def train_model(args, x, y, y_ohe):
+    """Returns a trained model."""
+
+    model = gandlf.Model(build_generator(args.nb_latent),
+                         build_discriminator())
+    model.compile(optimizer='adam', loss={
+        'class': 'categorical_crossentropy',
+        'fake': gandlf.losses.negative_binary_crossentropy,
+        'real': 'binary_crossentropy',
+    }, metrics=['accuracy'])
+
+    model.fit({'latent': 'normal', 'real': x, 'class': y},
+              {'fake': 'ones', 'real': 'zeros', 'class': y_ohe},
+              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
+              batch_size=args.nb_batch)
 
 
 if __name__ == '__main__':
@@ -84,22 +129,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    model = gandlf.Model(build_generator(args.nb_latent),
-                         build_discriminator())
-    model.compile(optimizer='adam', loss={
-        'class': 'categorical_crossentropy',
-        'fake': gandlf.losses.negative_binary_crossentropy,
-        'real': 'binary_crossentropy',
-    }, metrics=['accuracy'])
+    # Get the training data.
+    x, y, y_ohe = get_training_data(args.nb_samples)
 
-    x, y = get_training_data(args.nb_samples)
-    y_ohe = np.eye(2)[y]
-    y = np.expand_dims(y, -1)
+    # Trains the model.
+    model = train_model(args, x, y, y_ohe)
 
-    model.fit({'latent': 'normal', 'real': x, 'class': y},
-              {'fake': 'ones', 'real': 'zeros', 'class': y_ohe},
-              train_auxiliary=args.supervised, nb_epoch=args.nb_epoch,
-              batch_size=args.nb_batch)
+    ##### Evaluates the trained model and prints a bunch of stuff. #####
 
     print('\n:: Input Data ::')
     print(x[:10])
