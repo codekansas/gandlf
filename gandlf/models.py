@@ -1,13 +1,13 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from cProfile import label
 import copy
 import itertools
 
 from keras import callbacks as keras_callbacks
 from keras import metrics as keras_metrics
 from keras import models as keras_models
+from keras import optimizers as keras_optimizers
 from keras.engine import training
 import six
 
@@ -331,6 +331,19 @@ class Model(keras_models.Model):
         loss = self._cast_outputs_to_all_modes(loss)
         loss_weights = self._cast_outputs_to_all_modes(loss_weights)
 
+        self.gen_optimizer = None
+
+        # Checks to see if the user passed separate optimizers for the
+        # generator and the discriminator.
+        if isinstance(optimizer, (list, tuple)):
+            if len(optimizer) != 2:
+                raise ValueError('If you pass a list for the optimizer, the '
+                                 'list should be [discriminator_optimizer, '
+                                 'generator_optimizer]. Got: %s' %
+                                 str(optimizer))
+            optimizer, gen_optimizer = optimizer
+            self.gen_optimizer = keras_optimizers.get(gen_optimizer)
+
         # Call the "parent" compile method.
         super(Model, self).compile(optimizer=optimizer,
                                    loss=loss,
@@ -338,6 +351,11 @@ class Model(keras_models.Model):
                                    loss_weights=loss_weights,
                                    sample_weight_mode=sample_weight_mode,
                                    **kwargs)
+
+        # Aliases the discriminator optimizer to the regular optimizer.
+        self.dis_optimizer = self.optimizer
+        if self.gen_optimizer is None:
+            self.gen_optimizer = self.optimizer
 
         # This lets the model know that it has been compiled.
         self.non_auxiliary_train_function = None
@@ -359,21 +377,6 @@ class Model(keras_models.Model):
         else:
             return []
 
-    def _get_clean_updates(self, params, loss):
-        """Returns cleaned updates.
-
-        This is necessary when there are weights specific to a particular
-        output, and therefore have no gradient with respect to some of the
-        losses (so when the model tries to apply updates it will fail).
-        """
-
-        grads = self.optimizer.get_gradients(loss, params)
-        new_params = [param
-                      for param, grad in zip(params, grads)
-                      if grad is not None]
-
-        return self.optimizer.get_updates(new_params, self.constraints, loss)
-
     def _make_train_function(self):
         """Builds the auxiliary train function."""
 
@@ -389,13 +392,13 @@ class Model(keras_models.Model):
                       self._get_learning_phase())
 
             # Gets the generator updates.
-            generator_updates = self.optimizer.get_updates(
+            generator_updates = self.gen_optimizer.get_updates(
                 self._collected_trainable_weights[0],
                 self.constraints,
                 self.generator_loss)
 
             # Gets the discriminator updates.
-            discriminator_updates = self.optimizer.get_updates(
+            discriminator_updates = self.dis_optimizer.get_updates(
                 self._collected_trainable_weights[1],
                 self.constraints,
                 self.discriminator_loss)

@@ -185,7 +185,7 @@ def get_mnist_data():
 def train_model(args, X_train, y_train, y_train_ohe):
     """This is the core part whre the model is trained."""
 
-    optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
+    adam_optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
 
     if args.lite:
         generator = build_generator_lite(args.nb_latent)
@@ -205,7 +205,7 @@ def train_model(args, X_train, y_train, y_train_ohe):
         'class_fake': 0.,  # Should ignore this completely.
     }
 
-    model.compile(optimizer=optimizer, loss={
+    model.compile(optimizer=['sgd', adam_optimizer], loss={
         'class': 'categorical_crossentropy',
         'src': 'binary_crossentropy',
     }, metrics=['accuracy'], loss_weights=loss_weights)
