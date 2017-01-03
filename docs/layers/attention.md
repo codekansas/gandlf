@@ -3,7 +3,7 @@
 ## RecurrentAttention1D
 
 ````python
-gandlf.layers.RecurrentAttention1D(layer, attention, attn_activation='tanh', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer, **kwargs)
+gandlf.layers.RecurrentAttention1D(layer, attention, attn_activation='tanh', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer)
 ````
 
 Makes the wrapped Keras RNN `layer` pay attention to the `attention` tensor, which has shape `(batch_size, num_attn_features)`.
@@ -22,7 +22,7 @@ h_new = s * h  # Element-wise weighting.
 ## RecurrentAttention2D
 
 ````python
-gandlf.layers.RecurrentAttention2D(layer, attention, time_dist_activation='softmax', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer=None, **kwargs)
+gandlf.layers.RecurrentAttention2D(layer, attention, time_dist_activation='softmax', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer=None)
 ````
 
 Makes the wrapped Keras RNN `layer` pay attention to the `attention` tensor, which has shape `(batch_size, num_attn_timesteps, num_attn_features)`.
