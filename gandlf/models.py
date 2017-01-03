@@ -287,9 +287,10 @@ class Model(keras_models.Model):
             if len(obj) == len(output_names):
                 obj = list(obj) * 3
 
-            elif len(obj) == 2:  # (gen, fake) and real
-                obj = (obj[0] * len(output_names) * 2 +
-                       obj[1] * len(output_names))
+            elif len(obj) == 2:  # (gen and real), fake
+                obj = ([obj[0]] * len(output_names) +
+                       [obj[1]] * len(output_names) +
+                       [obj[0]])
 
             elif len(obj) == 3:  # gen, fake and real
                 obj = ([obj[0]] * len(output_names) +
