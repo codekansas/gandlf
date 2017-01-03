@@ -6,6 +6,7 @@ A list of useful GAN hacks is available [here](https://github.com/soumith/ganhac
 
   - Normalize the data to `[-1, 1]`
     - This data can then be approximated using the `tanh` function
+  - Use Batch Normalization (implemented in Keras as [BatchNormalization](https://keras.io/layers/normalization/#batchnormalization))
 
 ## Model
 
@@ -20,4 +21,5 @@ A list of useful GAN hacks is available [here](https://github.com/soumith/ganhac
   - Reinforcement learning stability tricks: Not yet implemented
   - Use the Adam optimizer for the discriminator, and the SGD optimizer for the generator. This can be done as `model = gandlf.Model(optimizer=['adam', 'sgd'], ...)`
   - Don't let the discriminator saturate!
+  - Adapt the generator and discriminator updates so that when the generator loss is high relative to the discriminator, its learning rate is also higher. This is implemented as `gandlf.callbacks.AdaptiveLearningRate`
 
