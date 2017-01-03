@@ -249,7 +249,7 @@ class Model(keras_models.Model):
                             obj[name + suffix] = val
 
                 # Adds all ways to combine two ore more.
-                for a, b, _ in itertools.permutations('gen', 'real', 'fake'):
+                for a, b, _ in itertools.permutations(['gen', 'real', 'fake']):
                     if name + '_' + a + '_' + b in obj:
                         val = obj.pop(name + '_' + a + '_')
                         for suffix in [a, b]:
@@ -273,7 +273,7 @@ class Model(keras_models.Model):
                             obj[prefix + suffix] = val
 
             # Adds all ways to combine two.
-            for a, b, _ in itertools.permutations('gen', 'real', 'fake'):
+            for a, b, _ in itertools.permutations(['gen', 'real', 'fake']):
                 if a + '_' + b in obj:
                     val = obj.pop(name + '_' + a + '_')
                     for prefix in output_names:

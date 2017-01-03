@@ -29,7 +29,7 @@ class Residual(Wrapper):
         # Difference: `y = F(x) - x`
         output4 = Residual(Dense(5), merge_mode=diff_merge())(input)
 
-    Arguments:
+    Args:
         layer: The layer to wrap
         merge_mode: The merge operation
     """
