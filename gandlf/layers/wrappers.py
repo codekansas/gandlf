@@ -1,4 +1,3 @@
-"""Wrappers for Keras and Gandlf layers."""
 from __future__ import absolute_import
 
 from keras.engine import InputSpec

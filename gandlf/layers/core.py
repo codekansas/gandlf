@@ -1,5 +1,3 @@
-"""Core layers, tricks which can help easily improve GANs in many cases."""
-
 import keras
 import keras.backend as K
 

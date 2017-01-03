@@ -1,5 +1,3 @@
-"""Attention-based layers."""
-
 import keras
 import keras.backend as K
 

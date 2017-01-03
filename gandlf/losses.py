@@ -1,5 +1,3 @@
-"""Loss functions that might work well for training GANs."""
-
 import warnings
 
 import keras.backend as K
