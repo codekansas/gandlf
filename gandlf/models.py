@@ -241,12 +241,31 @@ class Model(keras_models.Model):
                         if name + suffix not in obj:
                             obj[name + suffix] = val
 
+                if name + '_dis' in obj:
+                    val = obj.pop(name + '_dis')
+                    for suffix in ['_fake', '_real']:
+                        if name + suffix not in obj:
+                            obj[name + suffix] = val
+
+                if name + '_gen_real' in obj:
+                    val = obj.pop(name + '_gen_real')
+                    for suffix in ['_gen', '_real']:
+                        if name + suffix not in obj:
+                            obj[name + suffix] = val
+
             for name in ['gen', 'fake', 'real']:
                 if name in obj:
                     val = obj.pop(name)
                     for prefix in output_names:
                         if prefix + '_' + name not in obj:
                             obj[prefix + '_' + name] = val
+
+            if name == 'dis':
+                val = obj.pop(name)
+                for suffix in ['_fake', '_real']:
+                    for prefix in output_names:
+                        if prefix + suffix not in obj:
+                            obj[prefix + suffix] = val
 
         elif isinstance(obj, (list, tuple)):
             if len(obj) == len(output_names):

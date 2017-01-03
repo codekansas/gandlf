@@ -109,14 +109,15 @@ def train_model(args, x, y, y_ohe):
     # This part illustrates how to turn the auxiliary classifier on and off,
     # if it is needed. This approach can also be used to pre-train the
     # auxiliary parts of the discriminator.
-    loss_weights = {'src': 1., 'class': 0. if args.unsupervised else 1.}
+    loss_weights = {'src_dis': 3., 'src_gen': 1.,
+                    'class': 0. if args.unsupervised else 1.}
 
     # This part illustrates how the Gandlf model interprets loss dictionaries.
     # binary_crossentropy is used for the 'src' outputs associated with the
     # generated data, while negative binary crossentropy is used for the 'src'
     # outputs associated with the real data.
-    loss = {'src': 'binary_crossentropy',
-            'src_real': gandlf.losses.negative_binary_crossentropy,
+    loss = {'src_dis': 'binary_crossentropy',
+            'src_gen': gandlf.losses.negative_binary_crossentropy,
             'class': 'categorical_crossentropy'}
 
     optimizer = keras.optimizers.adam(0.001)
@@ -125,8 +126,8 @@ def train_model(args, x, y, y_ohe):
 
     # Arguments don't just need to be passed as dictionaries. In this case,
     # the outputs correspond to [src_fake, class_fake, src_real, class_real].
-    model.fit(['normal', y, x], {'src_gen': 'ones', 'src_fake': 'zeros',
-                                 'src_real': 'ones', 'class': y_ohe},
+    model.fit(['normal', y, x], {'src_gen_real': 'ones', 'src_fake': 'zeros',
+                                 'class': y_ohe},
               nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
     return model
