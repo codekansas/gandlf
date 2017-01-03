@@ -202,6 +202,7 @@ def train_model(args, X_train, y_train, y_train_ohe):
         'src_real': 3.,
         'class': 0. if args.unsupervised else 1.,
         'class_gen': 0. if args.unsupervised else 0.1,  # Weight much less.
+        'class_fake': 0.,  # Should ignore this completely.
     }
 
     model.compile(optimizer=optimizer, loss={
