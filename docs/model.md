@@ -39,7 +39,7 @@ One problem is that the outputs have to be specified for each mode. The diagram 
 
 ![Training Modes](resources/training_modes.png)
 
-The prefixes above are used in Gandlf naming to specify the outputs. The example below illustrates how to specify the desired outputs for the `fit` function on the model above:
+The suffixes above are used in Gandlf naming to specify the outputs. The example below illustrates how to specify the desired outputs for the `fit` function on the model above:
 
 ````python
 model.fit(inputs=[...], outputs={
