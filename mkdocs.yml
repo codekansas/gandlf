@@ -6,6 +6,7 @@ theme: readthedocs
 
 pages:
 - Home: index.md
+- Background: background.md
 - Examples:
   - XOR: examples/xor.md
 #   - MNIST: examples/mnist.md
