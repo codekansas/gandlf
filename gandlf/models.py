@@ -87,31 +87,6 @@ class Model(keras_models.Model):
     generate new normal random variables with the right input shape and
     feed them to the correct model input. This can be done with any
     normal Keras input.
-
-    Below is a bare-bones example of training a model. For more examples,
-    see the `examples` folder associated with this project.
-
-        latent_vec = keras.layers.Input(shape=..., name='latent_vec')
-        generated = some_function_of(latent_vec)
-
-        data = keras.layers.Input(shape=..., name='data')
-        real_fake = some_function_of(data)  # Binary; has shape (..., 1).
-
-        generator = keras.models.Model(input=[latent_vec], output=[generated])
-        discriminator = keras.models.Model(input=[data], output=[real_fake])
-
-        model = gandlf.Model(generator, discriminator)
-        model.compile(...)
-
-        model.fit({'latent_vec': 'normal', 'data': real_data},
-                  {'real': 'ones', 'fake': 'zeros'})
-
-        # Provides samples from the generator model.
-        sample = model.sample({'latent_vec': 'normal'}, num_samples=10)
-
-        # Predicts if some input data is real or fake. If there were auxiliary
-        # outputs, it would also return the predictions for those outputs.
-        preds = model.predict({'data': input_data}, ...)
     """
 
     def __init__(self, generator, discriminator, name=None):
@@ -255,6 +230,35 @@ class Model(keras_models.Model):
                     metric_fn = keras_metrics.get(metric)
                     self.metrics_names[i] = name + '_' + metric_fn.__name__
 
+    def _cast_outputs_to_all_modes(self, obj):
+        output_names = self.discriminator.output_names
+
+        if isinstance(obj, dict):
+            for name in output_names:
+                if name in obj:
+                    val = obj.pop(name)
+                    for suffix in ['_gen', '_fake', '_real']:
+                        if name + suffix not in obj:
+                            obj[name + suffix] = val
+
+            for name in ['gen', 'fake', 'real']:
+                if name in obj:
+                    val = obj.pop(name)
+                    for prefix in output_names:
+                        if prefix + '_' + name not in obj:
+                            obj[prefix + '_' + name] = val
+
+        elif isinstance(obj, (list, tuple)):
+            if len(obj) == len(output_names):
+                obj = list(obj) * 3
+
+            elif len(obj) == 3:  # gen, fake and real
+                obj = ([obj[0]] * len(output_names) +
+                       [obj[1]] * len(output_names) +
+                       [obj[2]] * len(output_names))
+
+        return obj
+
     def compile(self, loss, optimizer, metrics=None,
                 loss_weights=None, sample_weight_mode=None, **kwargs):
         """Configures the model for training.
@@ -268,10 +272,7 @@ class Model(keras_models.Model):
                 It is almost always a good idea to use binary crossentropy
                 loss for the real / fake prediction. To use a different
                 loss for the auxiliary outputs, provide them as a list or
-                dictionary. The loss functions can also be specified by per
-                discriminator output, by passing a dictionary of (name, loss)
-                pairs or lis of losses, where each corresponds to an output
-                of the discriminator model.
+                dictionary.
             metrics: list of metrics to be evaluated by the model during
                 training and testing. Typically you will use `metrics=['acc']`
                 to calculate accuracy. To specify different metrics for
@@ -289,27 +290,8 @@ class Model(keras_models.Model):
         # Preprocess the losses and loss weights, so that one value can be
         # specified for all three training modes  (generator, discriminator
         # fake, and discriminator real).
-        def _cast_to_all_modes(obj, name):
-            output_names = self.discriminator.output_names
-            if (isinstance(obj, dict) and len(obj) == len(output_names)
-                    and any(n in obj for n in output_names)):
-                missing_keys = list(set(output_names).difference(obj.keys()))
-                if missing_keys:
-                    raise ValueError('You tried to specify %s per '
-                                     'discriminator output, but the provided '
-                                     'dictionary (keys=%s) is missing '
-                                     'the outputs: %s' % (name,
-                                                          str(obj.keys()),
-                                                          str(missing_keys)))
-                obj = [obj.get(name) for name in output_names] * 3
-            elif isinstance(obj, list) and len(obj) == len(output_names):
-                obj = obj * 3
-            return obj
-
-        # Makes it possible to specify them per output of the discriminator
-        # rather than per output of the entire model.
-        loss = _cast_to_all_modes(loss, 'loss')
-        loss_weights = _cast_to_all_modes(loss_weights, 'loss weights')
+        loss = self._cast_outputs_to_all_modes(loss)
+        loss_weights = self._cast_outputs_to_all_modes(loss_weights)
 
         # Call the "parent" compile method.
         super(Model, self).compile(optimizer=optimizer,
@@ -694,6 +676,9 @@ class Model(keras_models.Model):
             A "History" instance. Its `history` attribute contains all
             information collected during training.
         """
+
+        # Allows passing data per output.
+        y = self._cast_outputs_to_all_modes(y)
 
         if validation_split or validation_data:
             raise NotImplementedError('Validation sets are not yet '

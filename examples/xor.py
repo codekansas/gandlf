@@ -27,10 +27,10 @@ On the Cartesian plane, the classes are:
 To show all command line options:
 
     ./examples/xor.py --help
+    
+The model runs as an ACGAN by default. To run in unsupervised mode:
 
-The model runs in unsupervised mode by default. To run as an ACGAN:
-
-    ./examples/xor.py --supervised
+    ./examples/xor.py --unsupervised
 """
 
 from __future__ import print_function
@@ -55,7 +55,7 @@ def get_training_data(num_samples):
     y = np.cast['int32'](y)
 
     x = np.cast['float32'](x) * 1.6 - 0.8  # Scales to [-1, 1].
-    x += np.random.uniform(-0.2, 0.2, size=x.shape)
+    x += np.random.uniform(-0.1, 0.1, size=x.shape)
 
     y_ohe = np.cast['float32'](np.eye(4)[y])
     y = np.cast['float32'](np.expand_dims(y, -1))
@@ -109,24 +109,24 @@ def train_model(args, x, y, y_ohe):
     # This part illustrates how to turn the auxiliary classifier on and off,
     # if it is needed. This approach can also be used to pre-train the
     # auxiliary parts of the discriminator.
-    if args.supervised:
-        loss_weights = {'src_real': 2., 'src_fake': 1.,
-                        'class_real': 2., 'class_fake': 1.}
-    else:
-        loss_weights = {'src_real': 2., 'src_fake': 1.,
-                        'class_real': 0., 'class_fake': 0.}
+    loss_weights = {'src': 1., 'class': 0. if args.unsupervised else 1.}
+
+    # This part illustrates how the Gandlf model interprets loss dictionaries.
+    # binary_crossentropy is used for the 'src' outputs associated with the
+    # generated data, while negative binary crossentropy is used for the 'src'
+    # outputs associated with the real data.
+    loss = {'src': 'binary_crossentropy',
+            'src_real': gandlf.losses.negative_binary_crossentropy,
+            'class': 'categorical_crossentropy'}
 
     optimizer = keras.optimizers.adam(0.001)
-    model.compile(optimizer=optimizer, loss={
-        'src_real': 'binary_crossentropy',
-        'class_real': 'categorical_crossentropy',
-        'src_fake': 'binary_crossentropy',
-        'class_fake': 'categorical_crossentropy'
-    }, metrics=['accuracy'], loss_weights=loss_weights)
+    model.compile(optimizer=optimizer, loss=loss,
+                  metrics=['accuracy'], loss_weights=loss_weights)
 
     # Arguments don't just need to be passed as dictionaries. In this case,
     # the outputs correspond to [src_fake, class_fake, src_real, class_real].
-    model.fit(['normal', y, x], ['zeros', y_ohe, 'ones', y_ohe],
+    model.fit(['normal', y, x], {'src_gen': 'ones', 'src_fake': 'zeros',
+                                 'src_real': 'ones', 'class': y_ohe},
               nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
     return model
@@ -143,9 +143,9 @@ if __name__ == '__main__':
     training_params.add_argument('--nb_batch', type=int, default=100,
                                  metavar='INT',
                                  help='number of samples per batch')
-    training_params.add_argument('--supervised', default=False,
+    training_params.add_argument('--unsupervised', default=False,
                                  action='store_true',
-                                 help='if set, train as an ACGAN')
+                                 help='if set, train as a vanilla GAN')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=10,
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     print('\n:: Target Data ::')
     print(np.cast['int32'](y[:10]))
 
-    if args.supervised:
+    if not args.unsupervised:
         print('\n:: Predictions for Real Data ::')
         preds = np.argmax(model.predict([x[:10]])[1], -1)
         print(preds.reshape((-1, 1)))
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     p = model.sample(['normal', y[:10]])
     print(p)
 
-    if args.supervised:
+    if not args.unsupervised:
         print('\n:: Predictions for Generated Data ::')
         preds = np.argmax(model.predict([p])[1], -1)
         print(preds.reshape((-1, 1)))
