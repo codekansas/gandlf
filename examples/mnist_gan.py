@@ -13,7 +13,9 @@ Consult https://github.com/lukedeo/keras-acgan for more information about the
 model.
 
 In addition to the ACGAN implementation from the Keras examples folder, there
-is a lite version of the model, which is faster on CPUs.
+is a lite version of the model, which is faster on CPUs. The results aren't
+as good, but it can be run for 10 epochs in ~15 minutes on a Macbook Pro,
+and generates some discernable patterns.
 
 To show all command line options:
 
