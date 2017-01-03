@@ -63,7 +63,7 @@ model.fit(['normal', <input_data>], {'gen_real': 'ones', 'fake': 'zeros'})
 model.fit({'latent_vec': 'normal', 'data_input': <input_data>},
           {'src': 'ones', 'src_fake': 'zeros'})
 model.fit({'latent_vec': 'normal', 'data_input': <input_data>},
-          {'src_gen_real': '1', 'src_fake': '0'})
+          {'src_gen': '1', 'src_real': '1', 'src_fake': '0'})
 
 # The model provides a function for predicting the discriminator's
 # output on some input data, which is useful for auxiliary classification.
@@ -74,6 +74,8 @@ generated_data = model.sample(['normal'], num_samples=10)
 
 # Under the hood, other functions work like their Keras counterparts.
 model.save('/save/path')
+model.generator.save('/generator/save/path')
+model.discriminator.save('/discriminator/save/path')
 ````
 
 ## Guiding Principles
