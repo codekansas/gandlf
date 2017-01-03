@@ -235,24 +235,30 @@ class Model(keras_models.Model):
 
         if isinstance(obj, dict):
             for name in output_names:
+
+                # A name by itself is interpretted as (gen, fake, real).
                 if name in obj:
                     val = obj.pop(name)
                     for suffix in ['_gen', '_fake', '_real']:
                         if name + suffix not in obj:
                             obj[name + suffix] = val
 
+                # Adds discriminator -> (fake, real).
                 if name + '_dis' in obj:
                     val = obj.pop(name + '_dis')
                     for suffix in ['_fake', '_real']:
                         if name + suffix not in obj:
                             obj[name + suffix] = val
 
-                if name + '_gen_real' in obj:
-                    val = obj.pop(name + '_gen_real')
-                    for suffix in ['_gen', '_real']:
-                        if name + suffix not in obj:
-                            obj[name + suffix] = val
+                # Adds all ways to combine two ore more.
+                for a, b, _ in itertools.permutations('gen', 'real', 'fake'):
+                    if name + '_' + a + '_' + b in obj:
+                        val = obj.pop(name + '_' + a + '_')
+                        for suffix in [a, b]:
+                            if name + '_' + suffix not in obj:
+                                obj[name + '_' + suffix] = val
 
+            # Each by itself is interpretted as meaning all of that type.
             for name in ['gen', 'fake', 'real']:
                 if name in obj:
                     val = obj.pop(name)
@@ -260,6 +266,7 @@ class Model(keras_models.Model):
                         if prefix + '_' + name not in obj:
                             obj[prefix + '_' + name] = val
 
+            # Discriminator -> (fake, real).
             if name == 'dis':
                 val = obj.pop(name)
                 for suffix in ['_fake', '_real']:
@@ -267,9 +274,22 @@ class Model(keras_models.Model):
                         if prefix + suffix not in obj:
                             obj[prefix + suffix] = val
 
+            # Adds all ways to combine two.
+            for a, b, _ in itertools.permutations('gen', 'real', 'fake'):
+                if a + '_' + b in obj:
+                    val = obj.pop(name + '_' + a + '_')
+                    for prefix in output_names:
+                        for suffix in [a, b]:
+                            if prefix + '_' + suffix not in obj:
+                                obj[prefix + '_' + suffix] = val
+
         elif isinstance(obj, (list, tuple)):
             if len(obj) == len(output_names):
                 obj = list(obj) * 3
+
+            elif len(obj) == 2:  # (gen, fake) and real
+                obj = (obj[0] * len(output_names) * 2 +
+                       obj[1] * len(output_names))
 
             elif len(obj) == 3:  # gen, fake and real
                 obj = ([obj[0]] * len(output_names) +
