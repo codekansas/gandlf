@@ -7,6 +7,10 @@ theme: readthedocs
 pages:
 - Home: index.md
 - Background: background.md
+- Layers:
+  - Core: layers/core.md
+  - Attention: layers/attention.md
+  - Wrappers: layers/wrappers.md
 - Examples:
   - XOR: examples/xor.md
 #   - MNIST: examples/mnist.md
