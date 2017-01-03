@@ -1,4 +1,4 @@
-"""Extra Keras layers that are useful for making GANs."""
+"""Attention-based layers."""
 
 import keras
 import keras.backend as K
@@ -285,8 +285,6 @@ class RecurrentAttention2D(keras.layers.Wrapper):
         self.trainable_weights = [self.U_t, self.b_t,
                                   self.U_a, self.b_a]
 
-        self.trainable_weights += self.layer.trainable_weights
-
         self.built = True
 
     def reset_states(self):
@@ -364,19 +362,3 @@ class RecurrentAttention2D(keras.layers.Wrapper):
 
         base_config = super(RecurrentAttention1D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-
-class PermanentDropout(keras.layers.Dropout):
-    """Applies dropout to the input that isn't turned off during testing.
-
-    This is one possible improvement for your generator models.
-
-    Args:
-        p: float between 0 and 1. Fraction of the input units to drop.
-    """
-
-    def call(self, x, mask=None):
-        if 0. < self.p < 1.:
-            noise_shape = self._get_noise_shape(x)
-            x = K.dropout(x, self.p, noise_shape)
-        return x
