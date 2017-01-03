@@ -304,6 +304,9 @@ class Model(keras_models.Model):
         # Args:
             optimizer: str (name of optimizer) or optimizer object.
                 See Keras [optimizers](https://keras.io/optimizers/).
+                Alternateively, a pair of optimizers (discriminator_optimizer,
+                generator_optimizer) can be passed to use separate
+                optimizers for the two models.
             loss: str (name of objective function) or objective function.
                 More objective functions can be found under gandlf.losses.
                 See Keras [objectives](https://keras.io/objectives/).
