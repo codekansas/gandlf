@@ -3,9 +3,12 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from cProfile import label
 import copy
+import itertools
 
 from keras import callbacks as keras_callbacks
+from keras import metrics as keras_metrics
 from keras import models as keras_models
 from keras.engine import training
 import six
@@ -133,17 +136,17 @@ class Model(keras_models.Model):
             name='generator_around_discriminator')
 
         inputs = generator_discriminator.inputs + discriminator.inputs
-        outputs = generator_discriminator.outputs + discriminator.outputs
+        outputs = generator_discriminator.outputs * 2 + discriminator.outputs
 
         # The model is treated as the generator by Keras.
         super(Model, self).__init__(inputs, outputs, name)
 
-        # Copies the output names from the discriminator.
+        # Copies the input and output names from the discriminator.
         self.input_names = generator.input_names + discriminator.input_names
-
-        discriminator_names = self.discriminator.output_names
-        self.output_names = ['%s_fake' % name for name in discriminator_names]
-        self.output_names += ['%s_real' % name for name in discriminator_names]
+        output_names = self.discriminator.output_names
+        self.output_names = ['%s_gen' % name for name in output_names]
+        self.output_names += ['%s_fake' % name for name in output_names]
+        self.output_names += ['%s_real' % name for name in output_names]
 
     def _check_generator_and_discriminator(self, generator, discriminator):
         """Validates the provided models in a user-friendly way."""
@@ -155,6 +158,11 @@ class Model(keras_models.Model):
                              'be Keras models. Got discriminator=%s, '
                              'generator=%s' % (type(discriminator),
                                                type(generator)))
+
+        # This might not be necessary.
+        if not discriminator.outputs:
+            raise ValueError('The discriminator should have at least one '
+                             'output (no outputs were given).')
 
         if len(generator.outputs) != len(discriminator.inputs):
             raise ValueError('The discriminator model should have one input '
@@ -196,44 +204,59 @@ class Model(keras_models.Model):
         elif not isinstance(masks, list):
             masks = [masks]
 
-        # Recomputes the loss weights list (done in the parent compile method).
+        # Re-converts loss weights to a list.
         if self.loss_weights is None:
             loss_weights = [1. for _ in self.outputs]
         elif isinstance(self.loss_weights, dict):
-            loss_weights = [self.loss_weights.get(name, 1.)
+            loss_weights = [self.loss_weights[name]
                             for name in self.output_names]
         else:
             loss_weights = list(self.loss_weights)
 
-        def _compute_loss(index, y_pred):
+        def _compute_loss(index):
             """Computes loss for a single output."""
 
             y_true = self.targets[index]
+            y_pred = self.outputs[index]
             weighted_loss = training.weighted_objective(
                 self.loss_functions[index])
             sample_weight = self.sample_weights[index]
             mask = masks[index]
             loss_weight = loss_weights[index]
             output_loss = weighted_loss(y_true, y_pred, sample_weight, mask)
+
+            # Update the metrics tensors.
+            self.metrics_tensors[index] = output_loss
+
             return loss_weight * output_loss
 
-        # The generator trains generated -> real.
-        num_discrim_outputs = len(self.discriminator.outputs)
-        self.generator_loss = None
-        for i in range(num_discrim_outputs):
-            loss = _compute_loss(i + num_discrim_outputs, self.outputs[i])
-            self.generator_loss = (loss if self.generator_loss is None
-                                   else loss + self.generator_loss)
+        num_outputs = len(self.discriminator.outputs)
+        self.generator_loss = sum(_compute_loss(i) for i in range(num_outputs))
+        self.discriminator_loss = sum(_compute_loss(i) for i in
+                                      range(num_outputs, 3 * num_outputs))
 
-        # The discriminator trains real -> real and generated -> fake.
-        self.discriminator_loss = None
-        for i in range(len(self.outputs)):
-            loss = _compute_loss(i, self.outputs[i])
-            self.discriminator_loss = (loss if self.discriminator_loss is None
-                                       else loss + self.discriminator_loss)
+    def _update_metrics_names(self):
+        """This is a small hack to fix the metric names."""
 
-    def compile(self, optimizer, loss, metrics=None, loss_weights=None,
-                sample_weight_mode=None, **kwargs):
+        i = 1
+        for i, name in enumerate(self.output_names, i):
+            self.metrics_names[i] = name + '_loss'
+
+        nested_metrics = training.collect_metrics(self.metrics,
+                                                  self.output_names)
+
+        for name, output_metrics in zip(self.output_names, nested_metrics):
+            for metric in output_metrics:
+                i += 1
+
+                if metric == 'accuracy' or metric == 'acc':
+                    self.metrics_names[i] = name + '_acc'
+                else:
+                    metric_fn = keras_metrics.get(metric)
+                    self.metrics_names[i] = name + '_' + metric_fn.__name__
+
+    def compile(self, loss, optimizer, metrics=None,
+                loss_weights=None, sample_weight_mode=None, **kwargs):
         """Configures the model for training.
 
         # Args:
@@ -245,7 +268,10 @@ class Model(keras_models.Model):
                 It is almost always a good idea to use binary crossentropy
                 loss for the real / fake prediction. To use a different
                 loss for the auxiliary outputs, provide them as a list or
-                dictionary.
+                dictionary. The loss functions can also be specified by per
+                discriminator output, by passing a dictionary of (name, loss)
+                pairs or lis of losses, where each corresponds to an output
+                of the discriminator model.
             metrics: list of metrics to be evaluated by the model during
                 training and testing. Typically you will use `metrics=['acc']`
                 to calculate accuracy. To specify different metrics for
@@ -259,6 +285,31 @@ class Model(keras_models.Model):
             kwargs: extra arguments that are passed to the Theano backend (not
                 used by Tensorflow).
         """
+
+        # Preprocess the losses and loss weights, so that one value can be
+        # specified for all three training modes  (generator, discriminator
+        # fake, and discriminator real).
+        def _cast_to_all_modes(obj, name):
+            output_names = self.discriminator.output_names
+            if (isinstance(obj, dict) and len(obj) == len(output_names)
+                    and any(n in obj for n in output_names)):
+                missing_keys = list(set(output_names).difference(obj.keys()))
+                if missing_keys:
+                    raise ValueError('You tried to specify %s per '
+                                     'discriminator output, but the provided '
+                                     'dictionary (keys=%s) is missing '
+                                     'the outputs: %s' % (name,
+                                                          str(obj.keys()),
+                                                          str(missing_keys)))
+                obj = [obj.get(name) for name in output_names] * 3
+            elif isinstance(obj, list) and len(obj) == len(output_names):
+                obj = obj * 3
+            return obj
+
+        # Makes it possible to specify them per output of the discriminator
+        # rather than per output of the entire model.
+        loss = _cast_to_all_modes(loss, 'loss')
+        loss_weights = _cast_to_all_modes(loss_weights, 'loss weights')
 
         # Call the "parent" compile method.
         super(Model, self).compile(optimizer=optimizer,
@@ -274,6 +325,7 @@ class Model(keras_models.Model):
 
         # Computes the generator and discriminator losses.
         self._compute_losses()
+        self._update_metrics_names()
 
         # Separates the generator and discriminator weights.
         self._collected_trainable_weights = (
@@ -333,7 +385,8 @@ class Model(keras_models.Model):
 
             self.train_function = K.function(
                 inputs,
-                [self.total_loss] + self.metrics_tensors,
+                [self.total_loss] +
+                self.metrics_tensors,
                 updates=updates,
                 **self._function_kwargs)
 
@@ -458,30 +511,6 @@ class Model(keras_models.Model):
             y, self.loss_functions, output_shapes)
 
         return x, y, sample_weights, nb_train_samples
-
-    def _get_out_labels(self):
-        """Gets deduplicated output labels."""
-
-        out_labels = []
-
-        # Fixes a bug where accuracy names weren't matching loss names.
-        names = (name[:-5] for name in self.metrics_names
-                 if name.endswith('_loss'))
-        for i, name in enumerate(self.metrics_names):
-            if name.endswith('_acc'):
-                name = next(names, name[:-4]) + '_acc'
-            out_labels.append(name)
-
-        # Deduplicates the labels.
-        deduped_out_labels = []
-        for i, label in enumerate(out_labels):
-            new_label = label
-            if out_labels.count(label) > 1:
-                dup_idx = out_labels[:i].count(label) + 1
-                new_label += '_%d' % dup_idx
-            deduped_out_labels.append(new_label)
-
-        return deduped_out_labels
 
     def _make_sample_function(self):
         """Instantiates the sample function."""
@@ -687,7 +716,13 @@ class Model(keras_models.Model):
         else:
             ins = x + y + sample_weights
 
-        out_labels = self._get_out_labels()
+        # Deduplicates output labels.
+        out_labels = []
+        for label in self.metrics_names:
+            if out_labels.count(label) > 1:
+                label += '_' + str(out_labels.count(label) + 1)
+            out_labels.append(label)
+
         callback_metrics = copy.copy(out_labels)
 
         return self._fit_loop(train_fn, ins, nb_train_samples,
