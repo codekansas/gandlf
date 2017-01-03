@@ -13,6 +13,7 @@ pages:
   - Core: layers/core.md
   - Attention: layers/attention.md
   - Wrappers: layers/wrappers.md
+- Callbacks: callbacks.md
 - Examples:
   - XOR: examples/xor.md
 #   - MNIST: examples/mnist.md
