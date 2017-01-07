@@ -208,6 +208,10 @@ class Model(keras_models.Model):
         self.discriminator_loss = sum(_compute_loss(i) for i in
                                       range(num_outputs, 3 * num_outputs))
 
+        # Adds regularization losses.
+        self.generator_loss += sum(self.generator.losses)
+        self.discriminator_loss += sum(self.discriminator.losses)
+
     def _update_metrics_names(self):
         """This is a small hack to fix the metric names."""
 

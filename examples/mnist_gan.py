@@ -13,9 +13,7 @@ Consult https://github.com/lukedeo/keras-acgan for more information about the
 model.
 
 In addition to the ACGAN implementation from the Keras examples folder, there
-is a lite version of the model, which is faster on CPUs. The results aren't
-as good, but it can be run for 10 epochs in ~15 minutes on a Macbook Pro,
-and generates some discernable patterns.
+is a lite version of the model, which is faster on CPUs.
 
 To show all command line options:
 
@@ -131,15 +129,20 @@ def build_generator_lite(latent_size):
     cls = keras.layers.Flatten()(embed(image_class))
     input_vec = keras.layers.merge([latent, cls], mode='mul')
 
-    hidden = keras.layers.Dense(512)(input_vec)
+    hidden = keras.layers.Dense(512,
+        W_regularizer=keras.regularizers.l2(0.001),
+        activity_regularizer=keras.regularizers.activity_l2(0.001))(input_vec)
     hidden = keras.layers.LeakyReLU()(hidden)
     hidden = gandlf.layers.PermanentDropout(0.2)(hidden)
 
-    hidden = keras.layers.Dense(512)(hidden)
+    hidden = keras.layers.Dense(512,
+        W_regularizer=keras.regularizers.l2(0.001),
+        activity_regularizer=keras.regularizers.activity_l2(0.001))(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
     hidden = gandlf.layers.PermanentDropout(0.2)(hidden)
 
-    output_layer = keras.layers.Dense(28 * 28)(hidden)
+    output_layer = keras.layers.Dense(28 * 28,
+        activity_regularizer=keras.regularizers.activity_l2(0.0001))(hidden)
     fake_image = keras.layers.Reshape((1, 28, 28))(output_layer)
 
     return keras.models.Model([latent, image_class], fake_image)
@@ -150,6 +153,7 @@ def build_discriminator_lite():
 
     image = keras.layers.Input((1, 28, 28), name='real_data')
     reshaped = keras.layers.Flatten()(image)
+    # reshaped = keras.layers.BatchNormalization()(reshaped)
 
     # First hidden layer.
     hidden = keras.layers.Dense(512)(reshaped)
