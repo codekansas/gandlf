@@ -34,7 +34,7 @@ class AdaptiveLearningRate(keras.callbacks.Callback):
                              'must have an "lr" attribute.')
 
         gen_loss, dis_loss = 0., 0.
-        for key, val in logs:
+        for key, val in logs.items():
             if key.endswith('gen_loss'):
                 if val < 0:
                     raise ValueError('The adaptive learning rate callback '
