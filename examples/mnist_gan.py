@@ -13,7 +13,8 @@ Consult https://github.com/lukedeo/keras-acgan for more information about the
 model.
 
 In addition to the ACGAN implementation from the Keras examples folder, there
-is a lite version of the model, which is faster on CPUs.
+is a lite version of the model, which is faster on CPUs. Either model can be
+run both as supervised and unsupervised versions.
 
 To show all command line options:
 
@@ -25,7 +26,11 @@ To train the lite version of the model:
 
 Samples from the model can be plotted using Matplotlib:
 
-    ./examples/xor.py --plot
+    ./examples/xor.py --plot 3
+
+The model can be run in unsupervised mode (pure GAN):
+
+    ./examples/xor.py --unsupervised
 """
 
 from __future__ import print_function
@@ -43,17 +48,17 @@ import numpy as np
 np.random.seed(1337)
 
 # To make the images work correctly.
-keras.backend.set_image_dim_ordering('th')
+keras.backend.set_image_dim_ordering('tf')
 
 
-def build_generator(latent_size):
+def build_generator(latent_size, supervised):
     """Builds the big generator model."""
 
     cnn = keras.models.Sequential()
 
     cnn.add(keras.layers.Dense(1024, input_dim=latent_size, activation='relu'))
     cnn.add(keras.layers.Dense(128 * 7 * 7, activation='relu'))
-    cnn.add(keras.layers.Reshape((128, 7, 7)))
+    cnn.add(keras.layers.Reshape((7, 7, 128)))
 
     cnn.add(keras.layers.UpSampling2D(size=(2, 2)))
     cnn.add(keras.layers.Convolution2D(256, 5, 5, border_mode='same',
@@ -67,27 +72,33 @@ def build_generator(latent_size):
                                        activation='tanh', init='glorot_normal'))
 
     latent = keras.layers.Input(shape=(latent_size,), name='latent')
-    image_class = keras.layers.Input(shape=(1,), dtype='int32',
-                                     name='image_class')
 
-    embed = keras.layers.Embedding(10, latent_size, init='glorot_normal')
-    cls = keras.layers.Flatten()(embed(image_class))
-    h = keras.layers.merge([latent, cls], mode='mul')
+    if supervised:
+        image_class = keras.layers.Input(shape=(1,), dtype='int32',
+                                         name='image_class')
 
-    fake_image = cnn(h)
+        embed = keras.layers.Embedding(10, latent_size, init='glorot_normal')
+        cls = keras.layers.Flatten()(embed(image_class))
+        h = keras.layers.merge([latent, cls], mode='mul')
+        fake_image = cnn(h)
+        return keras.models.Model(input=[latent, image_class],
+                                  output=fake_image,
+                                  name='generator')
+    else:
+        fake_image = cnn(latent)
+        return keras.models.Model(input=latent,
+                                  output=output_fake_image,
+                                  name='generator')
 
-    return keras.models.Model(input=[latent, image_class], output=fake_image,
-                              name='generator')
 
-
-def build_discriminator():
+def build_discriminator(supervised):
     """Builds the big discriminator model."""
 
     cnn = keras.models.Sequential()
 
     cnn.add(keras.layers.Convolution2D(32, 3, 3, border_mode='same',
                                        subsample=(2, 2),
-                                       input_shape=(1, 28, 28)))
+                                       input_shape=(28, 28, 1)))
     cnn.add(keras.layers.LeakyReLU())
     cnn.add(keras.layers.Dropout(0.3))
 
@@ -108,68 +119,79 @@ def build_discriminator():
 
     cnn.add(keras.layers.Flatten())
 
-    image = keras.layers.Input(shape=(1, 28, 28), name='real_data')
+    image = keras.layers.Input(shape=(28, 28, 1), name='real_data')
 
     features = cnn(image)
 
     fake = keras.layers.Dense(1, activation='sigmoid', name='src')(features)
-    aux = keras.layers.Dense(10, activation='softmax', name='class')(features)
 
-    return keras.models.Model(input=image, output=[fake, aux],
-                              name='discriminator')
+    if supervised:
+        aux = keras.layers.Dense(10, activation='softmax', name='class')(features)
+        return keras.models.Model(input=image, output=[fake, aux],
+                                  name='discriminator')
+    else:
+        return keras.models.Model(input=image, output=fake,
+                                  name='discriminator')
 
 
-def build_generator_lite(latent_size):
+def build_generator_lite(latent_size, supervised):
     """Builds the much smaller generative model."""
 
     latent = keras.layers.Input((latent_size,), name='latent')
-    image_class = keras.layers.Input((1,), dtype='int32', name='image_class')
 
-    embed = keras.layers.Embedding(10, latent_size, init='glorot_normal')
-    cls = keras.layers.Flatten()(embed(image_class))
-    input_vec = keras.layers.merge([latent, cls], mode='mul')
+    if supervised:
+        image_class = keras.layers.Input((1,), dtype='int32',
+                                         name='image_class')
+        embed = keras.layers.Embedding(10, latent_size, init='glorot_normal')
+        cls = keras.layers.Flatten()(embed(image_class))
+        merged = keras.layers.merge([latent, cls], mode='mul')
+        input_vec = keras.layers.BatchNormalization()(merged)
+    else:
+        input_vec = latent
 
-    hidden = keras.layers.Dense(512,
-        W_regularizer=keras.regularizers.l2(0.001),
-        activity_regularizer=keras.regularizers.activity_l2(0.001))(input_vec)
+    hidden = keras.layers.Dense(512)(input_vec)
     hidden = keras.layers.LeakyReLU()(hidden)
-    hidden = gandlf.layers.PermanentDropout(0.2)(hidden)
+    hidden = gandlf.layers.PermanentDropout(0.3)(hidden)
 
-    hidden = keras.layers.Dense(512,
-        W_regularizer=keras.regularizers.l2(0.001),
-        activity_regularizer=keras.regularizers.activity_l2(0.001))(hidden)
+    hidden = keras.layers.Dense(512)(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
-    hidden = gandlf.layers.PermanentDropout(0.2)(hidden)
+    hidden = gandlf.layers.PermanentDropout(0.3)(hidden)
 
     output_layer = keras.layers.Dense(28 * 28,
         activity_regularizer=keras.regularizers.activity_l2(0.0001))(hidden)
-    fake_image = keras.layers.Reshape((1, 28, 28))(output_layer)
+    fake_image = keras.layers.Reshape((28, 28, 1))(output_layer)
 
-    return keras.models.Model([latent, image_class], fake_image)
+    if supervised:
+        return keras.models.Model(input=[latent, image_class],
+                                  output=fake_image)
+    else:
+        return keras.models.Model(input=latent, output=fake_image)
 
 
-def build_discriminator_lite():
+def build_discriminator_lite(supervised):
     """Builds the much smaller discriminator model."""
 
-    image = keras.layers.Input((1, 28, 28), name='real_data')
-    reshaped = keras.layers.Flatten()(image)
-    # reshaped = keras.layers.BatchNormalization()(reshaped)
+    image = keras.layers.Input((28, 28, 1), name='real_data')
+    hidden = keras.layers.Flatten()(image)
 
     # First hidden layer.
-    hidden = keras.layers.Dense(512)(reshaped)
-    hidden = keras.layers.Dropout(0.2)(hidden)
+    hidden = keras.layers.Dense(512)(hidden)
+    hidden = keras.layers.Dropout(0.3)(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
 
     # Second hidden layer.
     hidden = keras.layers.Dense(512)(hidden)
-    hidden = keras.layers.Dropout(0.2)(hidden)
+    hidden = keras.layers.Dropout(0.3)(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
 
     # Output layer.
     fake = keras.layers.Dense(1, activation='sigmoid', name='src')(hidden)
-    aux = keras.layers.Dense(10, activation='softmax', name='class')(hidden)
 
-    return keras.models.Model(input=image, output=[fake, aux])
+    if supervised:
+        aux = keras.layers.Dense(10, activation='softmax', name='class')(hidden)
+        return keras.models.Model(input=image, output=[fake, aux])
+    else:
+        return keras.models.Model(input=image, output=fake)
 
 
 def get_mnist_data():
@@ -177,10 +199,10 @@ def get_mnist_data():
 
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    X_train = np.expand_dims(X_train, axis=1)
+    X_train = np.expand_dims(X_train, axis=-1)
 
     X_test = (X_test.astype(np.float32) - 127.5) / 127.5
-    X_test = np.expand_dims(X_test, axis=1)
+    X_test = np.expand_dims(X_test, axis=-1)
 
     y_train = np.expand_dims(y_train, axis=-1)
     y_test = np.expand_dims(y_test, axis=-1)
@@ -189,37 +211,39 @@ def get_mnist_data():
 
 
 def train_model(args, X_train, y_train, y_train_ohe):
-    """This is the core part whre the model is trained."""
+    """This is the core part where the model is trained."""
 
     adam_optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
+    supervised = not args.unsupervised
 
     if args.lite:
-        generator = build_generator_lite(args.nb_latent)
-        discriminator = build_discriminator_lite()
+        generator = build_generator_lite(args.nb_latent, supervised)
+        discriminator = build_discriminator_lite(supervised)
     else:
-        generator = build_generator(args.nb_latent)
-        discriminator = build_discriminator()
+        generator = build_generator(args.nb_latent, supervised)
+        discriminator = build_discriminator(supervised)
 
     model = gandlf.Model(generator, discriminator)
 
-    # This turns supervised learning on and off.
-    loss_weights = {
-        'src': 1.,
-        'src_real': 3.,
-        'class': 0. if args.unsupervised else 1.,
-        'class_gen': 0. if args.unsupervised else 0.1,  # Weight much less.
-        'class_fake': 0.,  # Should ignore this completely.
-    }
+    loss_weights = {'src': 1.}
+    if supervised:
+        loss_weights['class'] = 1.
+        loss_weights['class_fake'] = 0.
 
-    model.compile(optimizer=['sgd', adam_optimizer], loss={
-        'class': 'categorical_crossentropy',
-        'src': 'binary_crossentropy',
-    }, metrics=['accuracy'], loss_weights=loss_weights)
+    loss = {'src': 'binary_crossentropy'}
+    if supervised:
+        loss['class'] = 'categorical_crossentropy'
 
-    model.fit(['normal', y_train, X_train],
-              {'class': y_train_ohe,
-               'src_gen': '1', 'src_fake': '0', 'src_real': '1'},
-              nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
+    model.compile(optimizer=adam_optimizer, loss=loss,
+                  loss_weights=loss_weights)
+
+    outputs = {'src': '1', 'src_fake': '0'}
+    if supervised:
+        outputs['class'] = y_train_ohe
+
+    inputs = ['uniform'] + ([] if args.unsupervised else [y_train]) + [X_train]
+
+    model.fit(inputs, outputs, nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
     return model
 
@@ -235,11 +259,12 @@ if __name__ == '__main__':
     training_params.add_argument('--nb_batch', type=int, default=32,
                                  metavar='INT',
                                  help='number of samples per batch')
-    training_params.add_argument('--plot', default=False, action='store_true',
-                                 help='If set, plot samples from generator.')
+    training_params.add_argument('--plot', type=int, default=0,
+                                 metavar='INT',
+                                 help='Number of generator samples to plot')
 
     model_params = parser.add_argument_group('model params')
-    model_params.add_argument('--nb_latent', type=int, default=100,
+    model_params.add_argument('--nb_latent', type=int, default=10,
                               metavar='INT',
                               help='dimensions in the latent vector')
     model_params.add_argument('--save_path', type=str, metavar='STR',
@@ -261,6 +286,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if args.plot:
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError('To plot samples from the generator, you must '
+                              'install Matplotlib (not found in path).')
+
     # Gets training and testing data.
     (X_train, y_train), (_, _) = get_mnist_data()
 
@@ -270,21 +302,20 @@ if __name__ == '__main__':
     model = train_model(args, X_train, y_train, y_train_ohe)
 
     if args.plot:
-        nb_samples = 3
-        labels = y_train[:nb_samples]
-        samples = model.sample(['normal', labels])
-
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            raise ImportError('To plot samples from the generator, you must '
-                              'install Matplotlib (not found in path).')
-
-        for i, (sample, digit) in enumerate(zip(samples, labels)):
-            sample = sample.reshape((28, 28))
-            plt.figure()
-            plt.imshow(sample, cmap='gray')
-            plt.axis('off')
+        if args.unsupervised:
+            samples = model.sample(['normal'], num_samples=args.plot)
+            for sample in samples:
+                plt.figure()
+                plt.imshow(sample.reshape((28, 28)), cmap='gray')
+                plt.axis('off')
+        else:
+            labels = y_train[:args.plot]
+            samples = model.sample(['normal', labels])
+            for sample, digit in zip(samples, labels):
+                plt.figure()
+                plt.imshow(sample.reshape((28, 28)), cmap='gray')
+                plt.axis('off')
+                print('Digit: %d' % digit)
         plt.show()
 
     model.save(args.save_path)

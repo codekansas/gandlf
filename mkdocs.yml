@@ -16,5 +16,6 @@ pages:
 - Callbacks: callbacks.md
 - Examples:
   - XOR: examples/xor.md
-#   - MNIST: examples/mnist.md
+  - MNIST GAN: examples/mnist_gan.md
+  - VGG16: examples/vgg16.md
 

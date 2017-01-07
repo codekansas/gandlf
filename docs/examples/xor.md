@@ -1,4 +1,4 @@
-[Link to file in Github project](https://github.com/codekansas/gandlf/blob/master/examples/xor.py)
+[xor.py](https://github.com/codekansas/gandlf/blob/master/examples/xor.py)
 
 This example can be run quickly on a CPU, and is a good demonstration of one of the tricky parts about training GANs. The input data consists of four uniform distributions, centered near `(-1, -1)`, `(1, -1)`, `(-1, 1)` and `(1, 1)`. This is illustrated in the figure below, which each of the distributions labeled.
 

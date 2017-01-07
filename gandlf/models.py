@@ -32,6 +32,32 @@ def is_numpy_array(x):
     return type(x).__module__ == np.__name__
 
 
+def _get_callable(callable_type, shape_no_b):
+    """Gets callable function."""
+
+    if callable_type == 'normal':
+        return lambda b: np.random.normal(size=(b,) + shape_no_b)
+    elif callable_type == 'uniform':
+        return lambda b: np.random.uniform(size=(b,) + shape_no_b)
+    elif callable_type == 'ones' or callable_type == '1':
+        return lambda b: np.ones(shape=(b,) + shape_no_b)
+    elif callable_type == 'zeros' or callable_type == '0':
+        return lambda b: np.zeros(shape=(b,) + shape_no_b)
+    elif callable_type == 'ohe' or callable_type == 'onehot':
+        def _get_ohe(b):
+            nb_classes = shape_no_b[-1]
+            idx = np.random.randint(0, nb_classes, tuple(b) + shape_no_b[:-1])
+            return np.eye(nb_classes)[idx]
+
+        return _get_ohe
+    else:
+        raise ValueError('Error when checking %s:'
+                         'Invalid data type string: %s'
+                         'Choices are "normal", "uniform",'
+                         '"ones" or "zeros".' %
+                         (exception_prefix, array))
+
+
 def get_batch(X, start=None, stop=None):
     """Like keras.engine.training.slice_X, but supports latent vectors.
 
@@ -420,7 +446,7 @@ class Model(keras_models.Model):
                 updates=updates,
                 **self._function_kwargs)
 
-    def _standardize_input_data(self, data, names, shapes, nb_train_samples,
+    def _standardize_input_data(self, data, names, shapes,
                                 check_batch_dim=True, exception_prefix=''):
         """Standardizes the provided input data."""
 
@@ -442,23 +468,8 @@ class Model(keras_models.Model):
                                       str(array.shape)))
 
             elif isinstance(array, six.string_types):
-                array = array.lower()
-                shape_no_b = shape[1:]
-
-                if array == 'normal':
-                    array = lambda b: np.random.uniform(size=(b,) + shape_no_b)
-                elif array == 'uniform':
-                    array = lambda b: np.random.uniform(size=(b,) + shape_no_b)
-                elif array == 'ones' or array == 'one' or array == '1':
-                    array = np.ones(shape=(nb_train_samples,) + shape_no_b)
-                elif array == 'zeros' or array == 'zero' or array == '0':
-                    array = np.zeros(shape=(nb_train_samples,) + shape_no_b)
-                else:
-                    raise ValueError('Error when checking %s:'
-                                     'Invalid data type string: %s'
-                                     'Choices are "normal", "uniform",'
-                                     '"ones", or "zeros".' %
-                                     (exception_prefix, array))
+                callable_type = array.lower()
+                array = _get_callable(callable_type, shape[1:])
 
             elif hasattr(array, '__call__'):
                 called = array(1)
@@ -523,22 +534,24 @@ class Model(keras_models.Model):
                              'array (usually the real training data).')
 
         x = self._standardize_input_data(
-            x, input_names, input_shapes, nb_train_samples,
+            x, input_names, input_shapes,
             check_batch_dim=False, exception_prefix='model input')
         y = self._standardize_input_data(
-            y, output_names, output_shapes, nb_train_samples,
+            y, output_names, output_shapes,
             check_batch_dim=False, exception_prefix='model output')
+        y_exp = [y_inst(nb_train_samples) if hasattr(y_inst, '__call__')
+                 else y_inst for y_inst in y]
         sample_weights = training.standardize_sample_weights(
             sample_weight, output_names)
         class_weights = training.standardize_class_weights(
             class_weight, output_names)
         sample_weights = [training.standardize_weights(ref, sw, cw, mode)
                           for ref, sw, cw, mode
-                          in zip(y, sample_weights, class_weights,
+                          in zip(y_exp, sample_weights, class_weights,
                                  self.sample_weight_modes)]
 
         training.check_loss_and_target_compatibility(
-            y, self.loss_functions, output_shapes)
+            y_exp, self.loss_functions, output_shapes)
 
         return x, y, sample_weights, nb_train_samples
 
@@ -596,7 +609,7 @@ class Model(keras_models.Model):
                              'num_samples.')
 
         x = self._standardize_input_data(
-            x, input_names, input_shapes, num_samples,
+            x, input_names, input_shapes,
             check_batch_dim=False, exception_prefix='model input')
 
         # Updates callable parts.

@@ -1,9 +1,8 @@
 ## Generative Adversarial Network Deep Learning Framework
 
->He that breaks a thing to find out what it is has left the path of wisdom.
->(Council of Elrond Style Guide)
+>Home is now behind you, the world is ahead!
 
-This is a framework built on top of [Keras](https://github.com/fchollet/keras) for training [Generative Adversarial Networks](https://arxiv.org/abs/1406.2661).
+This framework was built to make it possible for anyone to train [Generative Adversarial Networks](https://arxiv.org/abs/1406.2661). It is built on top of [Keras](https://github.com/fchollet/keras).
 
 Because it's built on top of Keras, it has the benefits of being *modular*, *minimal* and *extensible*, running on both CPU and GPU using either Tensorflow or Theano.
 
