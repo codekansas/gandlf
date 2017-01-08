@@ -8,7 +8,13 @@ Because it's built on top of Keras, it has the benefits of being *modular*, *min
 
 ## Installation
 
-Using Pip:
+Installing PyPi version:
+
+````sh
+pip install gandlf
+````
+
+Installing up-to-date version:
 
 ````sh
 pip install git+https://github.com/codekansas/gandlf
