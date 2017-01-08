@@ -260,11 +260,7 @@ if __name__ == '__main__':
                                  help='number of samples per batch')
     training_params.add_argument('--plot', type=int, default=0,
                                  metavar='INT',
-<<<<<<< HEAD
-                                 help='Number of generator samples to plot')
-=======
                                  help='number of generator samples to plot')
->>>>>>> development
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=10,
