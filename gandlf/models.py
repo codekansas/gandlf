@@ -118,9 +118,8 @@ class Model(keras_models.Model):
 
         Args:
             generator: a Keras model that generates outputs.
-            discriminator: a Keras model that has one input for every output
-                of the generator model, and has at least one output, where
-                the first output if a binary real / fake prediction.
+            discriminator: a Keras model that has at least one input for every
+                output of the generator model, and has at least one output.
             name: str (optional), the name for this model.
         """
 
@@ -129,12 +128,18 @@ class Model(keras_models.Model):
         self.generator = generator
         self.discriminator = discriminator
 
+        num_generated = len(generator.outputs)
+        gen_dis_outputs = discriminator(generator.outputs +
+                                        discriminator.inputs[num_generated:])
+
         generator_discriminator = keras_models.Model(
-            input=generator.inputs,
-            output=discriminator(generator.outputs),
+            input=generator.inputs + discriminator.inputs[num_generated:],
+            output=gen_dis_outputs,
             name='generator_around_discriminator')
 
-        inputs = generator_discriminator.inputs + discriminator.inputs
+        inputs = (generator_discriminator.inputs[:-num_generated] +
+                  discriminator.inputs[:num_generated] +
+                  generator_discriminator.inputs[-num_generated:])
         outputs = generator_discriminator.outputs * 2 + discriminator.outputs
 
         # The model is treated as the generator by Keras.
@@ -158,14 +163,9 @@ class Model(keras_models.Model):
                              'generator=%s' % (type(discriminator),
                                                type(generator)))
 
-        # This might not be necessary.
-        if not discriminator.outputs:
-            raise ValueError('The discriminator should have at least one '
-                             'output (no outputs were given).')
-
-        if len(generator.outputs) != len(discriminator.inputs):
-            raise ValueError('The discriminator model should have one input '
-                             'per output of the generator model.')
+        if len(generator.outputs) > len(discriminator.inputs):
+            raise ValueError('The discriminator model should have at least one '
+                             'input per output of the generator model.')
 
         # Checks that the input and output shapes line up.
         generator_shapes = generator.inbound_nodes[0].output_shapes

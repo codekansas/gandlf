@@ -70,52 +70,51 @@ class RecurrentAttention1D(keras.layers.Wrapper):
 
         # Builds the wrapped layer.
         if not self.layer.built:
-            self.layer.build()
+            self.layer.build(input_shape)
 
         super(RecurrentAttention1D, self).build()
 
         attention_dim = self.attention._keras_shape[1]
         output_dim = self.layer.output_dim
 
-        self.U_a = self.add_weight((output_dim, output_dim),
+        self.attn_U_a = self.add_weight((attention_dim, output_dim),
                                    initializer=self.layer.inner_init,
-                                   name='{}_U_a'.format(self.name),
+                                   name='{}_attn_U_a'.format(self.name),
                                    regularizer=self.W_regularizer)
-        self.U_m = self.add_weight((attention_dim, output_dim),
+        self.attn_U_m = self.add_weight((output_dim, output_dim),
                                    initializer=self.layer.inner_init,
-                                   name='{}_U_m'.format(self.name),
+                                   name='{}_attn_U_m'.format(self.name),
                                    regularizer=self.W_regularizer)
-        self.b_m = self.add_weight((output_dim,),
+        self.attn_b_m = self.add_weight((output_dim,),
                                    initializer='zero',
-                                   name='{}_b_m'.format(self.name),
+                                   name='{}_attn_b_m'.format(self.name),
                                    regularizer=self.b_regularizer)
 
-        self.U_s = self.add_weight((output_dim, output_dim),
+        self.attn_U_s = self.add_weight((output_dim, output_dim),
                                    initializer=self.layer.inner_init,
-                                   name='{}_U_s'.format(self.name),
+                                   name='{}_attn_U_s'.format(self.name),
                                    regularizer=self.W_regularizer)
-        self.b_s = self.add_weight((output_dim,),
+        self.attn_b_s = self.add_weight((output_dim,),
                                    initializer='zero',
-                                   name='{}_b_s'.format(self.name),
+                                   name='{}_attn_b_s'.format(self.name),
                                    regularizer=self.b_regularizer)
 
-        self.trainable_weights = [self.U_a, self.U_m, self.b_m,
-                                  self.U_s, self.b_s]
+        self.trainable_weights = [self.attn_U_a, self.attn_U_m, self.attn_b_m,
+                                  self.attn_U_s, self.attn_b_s]
         self.trainable_weights += self.layer.trainable_weights
-
-        self.built = True
 
     def reset_states(self):
         self.layer.reset_states()
 
     def get_constants(self, x):
         constants = self.layer.get_constants(x)
-        constants.append(K.dot(self.attention, self.U_a))
+        constants.append(K.dot(self.attention, self.attn_U_a))
         return constants
 
     def _compute_attention(self, h, attention):
-        m = self.attn_activation(K.dot(h, self.U_m) + attention + self.b_m)
-        s = self.attn_gate_func(K.dot(m, self.U_s) + self.b_s)
+        m = self.attn_activation(K.dot(h, self.attn_U_m) + attention +
+                                 self.attn_b_m)
+        s = self.attn_gate_func(K.dot(m, self.attn_U_s) + self.attn_b_s)
         return s
 
     def step(self, x, states):
@@ -129,9 +128,15 @@ class RecurrentAttention1D(keras.layers.Wrapper):
             h *= self._compute_attention(h, states[3])
             return h, [h, c]
 
+    def get_output_shape_for(self, input_shape):
+        if self.layer.return_sequences:
+            return (input_shape[0], input_shape[1], self.layer.output_dim)
+        else:
+            return (input_shape[0], self.layer.output_dim)
+
     def call(self, x, mask=None):
         input_shape = self.input_spec[0].shape
-        if self.unroll and input_shape[1] is None:
+        if self.layer.unroll and input_shape[1] is None:
             raise ValueError('Cannot unroll a RNN if the '
                              'time dimension is undefined. \n'
                              '- If using a Sequential model, '
@@ -247,7 +252,7 @@ class RecurrentAttention2D(keras.layers.Wrapper):
         self.W_regularizer = keras.regularizers.get(W_regularizer)
         self.b_regularizer = keras.regularizers.get(b_regularizer)
 
-        super(RecurrentAttention1D, self).__init__(layer, **kwargs)
+        super(RecurrentAttention2D, self).__init__(layer, **kwargs)
 
     def build(self, input_shape):
         assert input_shape >= 3
@@ -255,65 +260,65 @@ class RecurrentAttention2D(keras.layers.Wrapper):
 
         # Builds the wrapped layer.
         if not self.layer.built:
-            self.layer.build()
+            self.layer.build(input_shape)
 
-        super(RecurrentAttention1D, self).build()
+        super(RecurrentAttention2D, self).build()
 
         num_attn_timesteps, num_attn_feats = K.int_shape(self.attention)[1:]
         output_dim = self.layer.output_dim
 
-        self.U_t = self.add_weight((output_dim, num_attn_timesteps),
+        self.attn_U_t = self.add_weight((output_dim, num_attn_timesteps),
                                    initializer=self.layer.inner_init,
-                                   name='{}_U_t'.format(self.name),
+                                   name='{}_attn_U_t'.format(self.name),
                                    regularizer=self.W_regularizer)
-        self.b_t = self.add_weight((num_attn_timesteps,),
+        self.attn_b_t = self.add_weight((num_attn_timesteps,),
                                    initializer='zero',
-                                   name='{}_b_t'.format(self.name),
+                                   name='{}_attn_b_t'.format(self.name),
                                    regularizer=self.b_regularizer)
 
-        self.U_a = self.add_weight((num_attn_feats, output_dim),
+        self.attn_U_a = self.add_weight((num_attn_feats, output_dim),
                                    initializer=self.layer.inner_init,
-                                   name='{}_U_a'.format(self.name),
+                                   name='{}_attn_U_a'.format(self.name),
                                    regularizer=self.W_regularizer)
-        self.b_a = self.add_weight((output_dim,),
+        self.attn_b_a = self.add_weight((output_dim,),
                                    initializer='zero',
-                                   name='{}_b_a'.format(self.name),
+                                   name='{}_attn_b_a'.format(self.name),
                                    regularizer=self.b_regularizer)
 
-        self.trainable_weights = [self.U_t, self.b_t,
-                                  self.U_a, self.b_a]
-
-        self.built = True
+        self.trainable_weights = [self.attn_U_t, self.attn_b_t,
+                                  self.attn_U_a, self.attn_b_a]
 
     def reset_states(self):
         self.layer.reset_states()
 
-    def get_constants(self, x):
-        constants = self.layer.get_constants(x)
-        constants.append(K.dot(self.attention, self.U_a))
-        return constants
-
-    def _compute_attention(self, h, attention):
-        time_weights = K.expand_dims(K.dot(h, self.U_t) + self.b_t, axis=-1)
+    def _compute_attention(self, h):
+        time_weights = K.expand_dims(K.dot(h, self.attn_U_t) + self.attn_b_t,
+                                     dim=-1)
         time_weights = self.time_dist_activation(time_weights)
-        weighted_sum = K.sum(time_weights * attention, axis=1)
-        attn_vec = K.dot(weighted_sum, self.U_a) + self.b_a
+        weighted_sum = K.sum(time_weights * self.attention, axis=1)
+        attn_vec = K.dot(weighted_sum, self.attn_U_a) + self.attn_b_a
         return self.attn_gate_func(attn_vec)
 
     def step(self, x, states):
         if self._wraps_lstm:  # If the recurrent layer is an LSTM.
             h, [_, c] = self.layer.step(x, states)
-            h *= self._compute_attention(h, states[4])
+            h *= self._compute_attention(h)
             return h, [h, c]
 
         else:  # All other RNN types.
             h, [h] = self.layer.step(x, states)
-            h *= self._compute_attention(h, states[3])
+            h *= self._compute_attention(h)
             return h, [h, c]
+
+    def get_output_shape_for(self, input_shape):
+        if self.layer.return_sequences:
+            return (input_shape[0], input_shape[1], self.layer.output_dim)
+        else:
+            return (input_shape[0], self.layer.output_dim)
 
     def call(self, x, mask=None):
         input_shape = self.input_spec[0].shape
-        if self.unroll and input_shape[1] is None:
+        if self.layer.unroll and input_shape[1] is None:
             raise ValueError('Cannot unroll a RNN if the '
                              'time dimension is undefined. \n'
                              '- If using a Sequential model, '
@@ -328,7 +333,7 @@ class RecurrentAttention2D(keras.layers.Wrapper):
 
         initial_states = (self.layer.states if self.layer.stateful else
                           self.layer.get_initial_states(x))
-        constants = self.get_constants(x)
+        constants = self.layer.get_constants(x)
         preprocessed_input = self.layer.preprocess_input(x)
 
         last_output, outputs, states = K.rnn(
@@ -358,5 +363,5 @@ class RecurrentAttention2D(keras.layers.Wrapper):
             'attn_gate_func': self.attn_gate_func.__name__,
         }
 
-        base_config = super(RecurrentAttention1D, self).get_config()
+        base_config = super(RecurrentAttention2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

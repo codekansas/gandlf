@@ -43,7 +43,6 @@ from keras.datasets import mnist
 import gandlf
 import numpy as np
 
-
 # For repeatability.
 np.random.seed(1337)
 
@@ -261,7 +260,11 @@ if __name__ == '__main__':
                                  help='number of samples per batch')
     training_params.add_argument('--plot', type=int, default=0,
                                  metavar='INT',
+<<<<<<< HEAD
                                  help='Number of generator samples to plot')
+=======
+                                 help='number of generator samples to plot')
+>>>>>>> development
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=10,
@@ -269,12 +272,12 @@ if __name__ == '__main__':
                               help='dimensions in the latent vector')
     model_params.add_argument('--save_path', type=str, metavar='STR',
                               default='/tmp/mnist_gan.keras_model',
-                              help='Where to save the model after training')
+                              help='where to save the model after training')
     model_params.add_argument('--lite', default=False, action='store_true',
-                              help='If set, trains the lite version instead')
+                              help='if set, trains the lite version instead')
     model_params.add_argument('--unsupervised', default=False,
                               action='store_true',
-                              help='If set, model doesn\'t use class labels')
+                              help='if set, model doesn\'t use class labels')
 
     optimizer_params = parser.add_argument_group('optimizer params')
     optimizer_params.add_argument('--lr', type=float, default=0.0002,
