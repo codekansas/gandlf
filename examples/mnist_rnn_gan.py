@@ -17,6 +17,16 @@ To show all command line options:
 Samples from the model can be plotted using Matplotlib:
 
     ./examples/xor.py --plot 3
+
+By default, the model doesn't use any attention. To use attention, specify
+the --gen_mode and --dis_mode parameters:
+
+    ./examples/xor.py --gen_mode <mode> --dis_mode <mode>
+
+The options for "mode" are:
+ - None: No attention
+ - 1D: RNN pays attention to the number label
+ - 2D: RNN pays attention to the input image
 """
 
 from __future__ import print_function
@@ -180,7 +190,7 @@ if __name__ == '__main__':
                                  help='number of generator samples to plot')
 
     model_params = parser.add_argument_group('model params')
-    model_params.add_argument('--nb_latent', type=int, default=10,
+    model_params.add_argument('--nb_latent', type=int, default=100,
                               metavar='INT',
                               help='dimensions in the latent vector')
     model_params.add_argument('--save_path', type=str, metavar='STR',
