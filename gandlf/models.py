@@ -50,6 +50,8 @@ def _get_callable(callable_type, shape_no_b):
             return np.eye(nb_classes)[idx]
 
         return _get_ohe
+    elif isinstance(callable_type, (int, float)):
+        return lambda b: np.ones(shape=(b,) + shape_no_b) * callable_type
     else:
         raise ValueError('Error when checking %s:'
                          'Invalid data type string: %s'
@@ -467,7 +469,7 @@ class Model(keras_models.Model):
                                      (exception_prefix, name, str(shape),
                                       str(array.shape)))
 
-            elif isinstance(array, six.string_types):
+            elif isinstance(array, six.string_types + (int, float)):
                 callable_type = array.lower()
                 array = _get_callable(callable_type, shape[1:])
 
