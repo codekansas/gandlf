@@ -1,7 +1,9 @@
-import keras
+from __future__ import absolute_import
 
-import gandlf
+import keras
 import keras.backend as K
+
+from .models import Model as GandlfModel
 
 
 class AdaptiveLearningRate(keras.callbacks.Callback):
@@ -23,7 +25,7 @@ class AdaptiveLearningRate(keras.callbacks.Callback):
         self.generator_lr = generator_lr
 
     def on_batch_end(self, epoch, logs={}):
-        if not isinstance(self.model, gandlf.Model):
+        if not isinstance(self.model, GandlfModel):
             raise ValueError('The AdaptiveLearningRate callback only works '
                              'for Gandlf models.')
 

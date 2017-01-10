@@ -27,7 +27,7 @@ On the Cartesian plane, the classes are:
 To show all command line options:
 
     ./examples/xor.py --help
-    
+
 The model runs as an ACGAN by default. To run in unsupervised mode:
 
     ./examples/xor.py --unsupervised
@@ -66,8 +66,8 @@ def get_training_data(num_samples):
 def build_generator(latent_size):
     """Builds a simple two-layer generator network."""
 
-    latent_layer = keras.layers.Input((latent_size,))
-    class_input = keras.layers.Input((1,))
+    latent_layer = keras.layers.Input((latent_size,), name='latent_input')
+    class_input = keras.layers.Input((1,), name='class_input')
 
     embeddings = keras.layers.Embedding(4, latent_size, 'glorot_normal')
     flat_embedded = keras.layers.Flatten()(embeddings(class_input))
@@ -81,12 +81,18 @@ def build_generator(latent_size):
     return keras.models.Model([latent_layer, class_input], [output_layer])
 
 
-def build_discriminator():
+def build_discriminator(use_minibatch_discrimination):
     """Builds a simple two-layer discriminator network."""
 
-    input_layer = keras.layers.Input((2,))
+    input_layer = keras.layers.Input((2,), name='data_input')
 
-    hidden_layer = keras.layers.Dense(64)(input_layer)
+    if use_minibatch_discrimination:
+        sims = gandlf.layers.BatchSimilarity()(input_layer)
+        hidden_layer = keras.layers.merge([input_layer, sims], mode='concat')
+    else:
+        hidden_layer = input_layer
+
+    hidden_layer = keras.layers.Dense(64)(hidden_layer)
     hidden_layer = keras.layers.LeakyReLU()(hidden_layer)
 
     real_fake = keras.layers.Dense(1)(hidden_layer)
@@ -104,7 +110,7 @@ def train_model(args, x, y, y_ohe):
     """Returns a trained model."""
 
     model = gandlf.Model(build_generator(args.nb_latent),
-                         build_discriminator())
+                         build_discriminator(args.minibatch_discriminate))
 
     # This part illustrates how to turn the auxiliary classifier on and off,
     # if it is needed. This approach can also be used to pre-train the
@@ -138,7 +144,7 @@ if __name__ == '__main__':
         description='Basic XOR example using a GAN.')
 
     training_params = parser.add_argument_group('training params')
-    training_params.add_argument('--nb_epoch', type=int, default=10,
+    training_params.add_argument('--nb_epoch', type=int, default=1,
                                  metavar='INT',
                                  help='number of training epochs')
     training_params.add_argument('--nb_batch', type=int, default=100,
@@ -155,6 +161,9 @@ if __name__ == '__main__':
     model_params.add_argument('--nb_samples', type=int, default=10000,
                               metavar='INT',
                               help='total number of training samples')
+    model_params.add_argument('--minibatch_discriminate', default=False,
+                              action='store_true',
+                              help='if set, use minibatch discrimination')
 
     args = parser.parse_args()
 

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import copy
+import inspect
 import itertools
 
 from keras import callbacks as keras_callbacks
@@ -88,11 +89,27 @@ def get_batch(X, start=None, stop=None):
         if hasattr(start, '__len__'):
             if hasattr(start, 'shape'):
                 start = start.tolist()
-            return (X[start] if is_numpy_array(x)
-                    else x(len(start)))
+            return (X[start] if is_numpy_array(X)
+                    else X(len(start)))
         else:
-            return (X[start:stop] if is_numpy_array(x)
-                    else x(stop - start))
+            return (X[start:stop] if is_numpy_array(X)
+                    else X(stop - start))
+
+
+def load_model(filepath, custom_objects=None):
+    """Loads a Gandlf model, which includes Gandlf custom layers."""
+
+    if not custom_objects:
+        custom_objects = {}
+
+    # Adds Gandlf layers as custom objects.
+    name_cls_pairs = itertools.chain.from_iterable(
+        inspect.getmembers(sys.modules['gandlf.layers'], inspect.isclass))
+    gandlf_layers = dict((name, cls) for name, cls in name_cls_pairs
+                         if name and name[0] != '_')
+    custom_objects.update(gandlf_layers)
+
+    return keras_models.load_model(filepath, custom_objects=custom_objects)
 
 
 class Model(keras_models.Model):
@@ -139,9 +156,9 @@ class Model(keras_models.Model):
             output=gen_dis_outputs,
             name='generator_around_discriminator')
 
-        inputs = (generator_discriminator.inputs[:-num_generated] +
+        inputs = (generator_discriminator.inputs[:len(generator.inputs)] +
                   discriminator.inputs[:num_generated] +
-                  generator_discriminator.inputs[-num_generated:])
+                  generator_discriminator.inputs[len(generator.inputs):])
         outputs = generator_discriminator.outputs * 2 + discriminator.outputs
 
         # The model is treated as the generator by Keras.
@@ -282,8 +299,9 @@ class Model(keras_models.Model):
 
                 # Adds all ways to combine two ore more.
                 for a, b, _ in itertools.permutations(['gen', 'real', 'fake']):
-                    if name + '_' + a + '_' + b in obj:
-                        val = obj.pop(name + '_' + a + '_')
+                    composite = name + '_' + a + '_' + b
+                    if composite in obj:
+                        val = obj.pop(composite)
                         for suffix in [a, b]:
                             if name + '_' + suffix not in obj:
                                 obj[name + '_' + suffix] = val
@@ -675,7 +693,7 @@ class Model(keras_models.Model):
                                  'num_samples.')
 
         x = self._standardize_input_data(
-            x, input_names, input_shapes, num_samples,
+            x, input_names, input_shapes,
             check_batch_dim=False, exception_prefix='model input')
 
         # Updates callable parts.
