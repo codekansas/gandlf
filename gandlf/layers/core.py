@@ -32,8 +32,8 @@ class BatchSimilarity(keras.layers.Layer):
 
     In order to make this layer linear time with respect to the batch size,
     instead of doing a pairwise comparison between each pair of samples in
-    the batch size, for each sample a random sample is uniformly selected
-    with which to do pairwise comparison.
+    the batch, for each sample a random sample is uniformly selected with
+    which to do pairwise comparison.
 
     Args:
         similarity: str, the similarity type. See gandlf.similarities for a
