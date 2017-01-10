@@ -14,6 +14,7 @@ pages:
   - Attention: layers/attention.md
   - Wrappers: layers/wrappers.md
 - Callbacks: callbacks.md
+- Losses: losses.md
 - Examples:
   - XOR: examples/xor.md
   - MNIST GAN: examples/mnist_gan.md
