@@ -16,7 +16,7 @@ An alternative to Keras [Dropout](https://keras.io/layers/core/#dropout) which s
 gandlf.layers.BatchSimilarity(similarity='exp_l1')
 ````
 
-Calculates the minibatch similarities, a trick introduced in [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498). These similarities can be added as features for the existing layer by using a Merge layer. The layer outputs a Tensor with shape `(batch_size, num_similarities)` for 2D tensors, `(batch_size, None, num_similarities)` for 3D Tensors, and so on.
+Calculates the minibatch similarities, a trick introduced in [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498). These similarities can be added as features for the existing layer by using a Merge layer. The layer takes as input a 2D Tensor with shape `(batch_size, num_features)` and outputs a Tensor with shape `(batch_size, num_similarities)`, where `num_similarities` is the total number of computed similarities.
 
 In order to make this layer linear time with respect to the batch size, instead of doing a pairwise comparison between each pair of samples in the batch, for each sample a random sample is uniformly selected with which to do pairwise comparison.
 

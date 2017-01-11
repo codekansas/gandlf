@@ -87,7 +87,7 @@ def build_discriminator(mode):
     """Builds the discriminator model."""
 
     image = keras.layers.Input((28, 28, 1), name='real_data')
-    flat = keras.layers.Reshape((28, 28))(image)
+    rnn_input = keras.layers.Reshape((28, 28))(image)
 
     rnn_1 = keras.layers.LSTM(128, return_sequences=True)
     rnn_2 = keras.layers.LSTM(1, return_sequences=False, name='pred_fake')
@@ -100,22 +100,22 @@ def build_discriminator(mode):
         rnn_1_attn = gandlf.layers.RecurrentAttention1D(rnn_1, embedded)
         rnn_2_attn = gandlf.layers.RecurrentAttention1D(rnn_2, embedded,
                                                         name='pred_fake')
-        pred_fake = rnn_2_attn(rnn_1_attn(flat))
+        pred_fake = rnn_2_attn(rnn_1_attn(rnn_input))
         return keras.models.Model(input=[image, input_class],
                                   output=pred_fake)
 
     elif mode == '2d':  # Pay attention to whole image.
         ref_image = keras.layers.Input((28, 28, 1), name='ref_image_dis')
-        flat = keras.layers.Reshape((28, 28))(ref_image)
-        rnn_1_attn = gandlf.layers.RecurrentAttention2D(rnn_1, flat)
-        rnn_2_attn = gandlf.layers.RecurrentAttention2D(rnn_2, flat,
+        attn_reshaped = keras.layers.Reshape((28, 28))(ref_image)
+        rnn_1_attn = gandlf.layers.RecurrentAttention2D(rnn_1, attn_reshaped)
+        rnn_2_attn = gandlf.layers.RecurrentAttention2D(rnn_2, attn_reshaped,
                                                         name='pred_fake')
-        pred_fake = rnn_2_attn(rnn_1_attn(flat))
+        pred_fake = rnn_2_attn(rnn_1_attn(rnn_input))
         return keras.models.Model(input=[image, ref_image],
                                   output=pred_fake)
 
     else:
-        pred_fake = rnn_2(rnn_1(flat))
+        pred_fake = rnn_2(rnn_1(rnn_input))
         return keras.models.Model(input=image,
                                   output=pred_fake)
 

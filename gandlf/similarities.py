@@ -1,13 +1,3 @@
-"""
-Guidelines: All similarities take two tensors and return a tensor with
-shape (batch_size, 1 ... 1), which is the sample-wise similarity between the
-two tensors.
-
-Each similarity function is:
- - Symmetric, so similarity(a, b) == similarity(b, a)
- - Monotonically increasing with respect to `a - b`, for a >= b
-"""
-
 import keras
 import keras.backend as K
 from keras.utils.generic_utils import get_from_module
@@ -28,13 +18,13 @@ def exp_l2(a, b):
 def l1(a, b):
     """L1 similarity. Maximum is 0 (a == b), minimum is -inf."""
 
-    return -K.sum(K.abs(a - b), axis=range(1, K.ndim(a)), keepdims=True)
+    return -K.sum(K.abs(a - b), axis=-1)
 
 
 def l2(a, b):
     """L2 similarity. Maximum is 0 (a == b), minimum is -inf."""
 
-    return -K.sum(K.square(a - b), axis=range(1, K.ndim(a)), keepdims=True)
+    return -K.sum(K.square(a - b), axis=-1)
 
 
 def cosine(a, b):
@@ -42,19 +32,19 @@ def cosine(a, b):
 
     a = K.l2_normalize(a)
     b = K.l2_normalize(b)
-    return 1 - K.mean(a * b, axis=range(1, K.ndim(a)), keepdims=True)
+    return 1 - K.mean(a * b, axis=-1)
 
 
 def sigmoid(a, b):
     """Sigmoid similarity. Maximum is 1 (a == b), minimum is 0."""
 
-    return K.sigmoid(K.sum(a * b, axis=range(1, K.ndim(a)), keepdims=True))
+    return K.sigmoid(K.sum(a * b, axis=-1)
 
 
 def euclidean(a, b):
     """Euclidian similarity. Maximum is 1 (a == b), minimum is 0 (a == -b)."""
 
-    x = K.sum(K.square(a - b), axis=range(1, K.ndim(a)), keepdims=True)
+    x = K.sum(K.square(a - b), axis=-1)
     return 1. / (1. + x)
 
 

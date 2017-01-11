@@ -8,7 +8,7 @@ gandlf.layers.Residual(layer, merge_mode='sum')
 
 Applies a residual to any Keras layer or model, so long as it's inputs are the same dimension as its outputs. Useful for implementing residual architectures.
 
-The provided `layer` has the have the same input and output dimensions. Given an input `x`, the output is:
+The provided `layer` has to have the same input and output dimensions. Given an input `x`, the output is:
 
 ````python
 output = merge_mode(x, layer(x))
