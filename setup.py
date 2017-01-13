@@ -3,7 +3,7 @@ from setuptools import setup
 
 
 setup(name='gandlf',
-      version='0.0.5',
+      version='0.0.7',
       description='Generative Adversarial Network Deep Learning Framework',
       author='Benjamin Bolte',
       author_email='bkbolte18@gmail.com',

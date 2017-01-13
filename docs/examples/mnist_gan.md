@@ -6,7 +6,11 @@ This example is a Gandlf implementation of the Keras MNIST ACGAN example, which 
 
 TODO: Add images sampled from this model.
 
-In addition to the convolutional model, a simple feed-forward model can be used for the discriminator and generator which can be trained much more quickly (feasible to run it on a laptop). The samples below show randomly sampled generated images from the lite model after a single epoch, which took about 100 seconds on a Macbook Pro.
+In addition to the convolutional model, a simple feed-forward model can be used for the discriminator and generator which can be trained much more quickly (feasible to run it on a laptop). The samples below show randomly sampled generated images from the lite model, which took about 100 seconds per epoch on a Macbook Pro.
 
 ![MNIST GAN Lite](../resources/mnist_gan_lite.png)
+
+The gif below shows the representation of a 6 when the model is fed latent vectors that interpret between two points. Because the lite model is not convolutional, the interpolation is not very smoothe.
+
+![MNIST GAN Lite Six Gif](../resources/mnist_gan_lite_six.gif)
 
