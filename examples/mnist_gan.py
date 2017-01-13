@@ -157,7 +157,7 @@ def build_generator_lite(latent_size, supervised):
     hidden = gandlf.layers.PermanentDropout(0.3)(hidden)
 
     output_layer = keras.layers.Dense(28 * 28,
-        activity_regularizer=keras.regularizers.activity_l2(0.0001))(hidden)
+        activation='tanh')(hidden)
     fake_image = keras.layers.Reshape((28, 28, 1))(output_layer)
 
     if supervised:
@@ -193,14 +193,19 @@ def build_discriminator_lite(supervised):
         return keras.models.Model(input=image, output=fake)
 
 
-def get_mnist_data():
+def get_mnist_data(binarize=False):
     """Puts the MNIST data in the right format."""
 
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
-    X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    X_train = np.expand_dims(X_train, axis=-1)
 
-    X_test = (X_test.astype(np.float32) - 127.5) / 127.5
+    if binarize:
+        X_test = np.where(X_test >= 10, 1, -1)
+        X_train = np.where(X_train >= 10, 1, -1)
+    else:
+        X_train = (X_train.astype(np.float32) - 127.5) / 127.5
+        X_test = (X_test.astype(np.float32) - 127.5) / 127.5
+
+    X_train = np.expand_dims(X_train, axis=-1)
     X_test = np.expand_dims(X_test, axis=-1)
 
     y_train = np.expand_dims(y_train, axis=-1)
@@ -263,6 +268,9 @@ if __name__ == '__main__':
     training_params.add_argument('--plot', type=int, default=0,
                                  metavar='INT',
                                  help='number of generator samples to plot')
+    training_params.add_argument('--binarize', default=False,
+                                 action='store_true',
+                                 help='if set, make mnist data binary')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=10,
@@ -303,7 +311,7 @@ if __name__ == '__main__':
                          'got %s.' % args.latent_type)
 
     # Gets training and testing data.
-    (X_train, y_train), (_, _) = get_mnist_data()
+    (X_train, y_train), (_, _) = get_mnist_data(args.binarize)
 
     # Turns digit labels into one-hot encoded labels.
     y_train_ohe = np.eye(10)[np.squeeze(y_train)]
