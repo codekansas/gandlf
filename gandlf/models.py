@@ -4,6 +4,8 @@ from __future__ import print_function
 import copy
 import inspect
 import itertools
+import json
+import sys
 
 from keras import callbacks as keras_callbacks
 from keras import metrics as keras_metrics
@@ -96,21 +98,106 @@ def get_batch(X, start=None, stop=None):
                     else X(stop - start))
 
 
+def save_model(model, filepath, overwrite=True):
+
+    def get_json_type(obj):
+        if hasattr(obj, 'get_config'):
+            return {'class_name': obj.__class__.__name__,
+                    'config': obj.get_config()}
+
+        if type(obj).__module__ == np.__name__:
+            return obj.item()
+
+        if callable(obj) or type(obj).__name__ == type.__name__:
+            return obj.__name__
+
+        raise TypeError('Not JSON Serializable:', obj)
+
+    import h5py
+    from keras import __version__ as keras_version
+
+    if not overwrite and os.path.isfile(filepath):
+        proceed = keras_models.ask_to_proceed_with_overwrite(filepath)
+        if not proceed:
+            return
+
+    f = h5py.File(filepath, 'w')
+    f.attrs['keras_version'] = str(keras_version).encode('utf8')
+    f.attrs['generator_config'] = json.dumps({
+        'class_name': model.discriminator.__class__.__name__,
+        'config': model.generator.get_config(),
+    }, default=get_json_type).encode('utf8')
+    f.attrs['discriminator_config'] = json.dumps({
+        'class_name': model.discriminator.__class__.__name__,
+        'config': model.discriminator.get_config(),
+    }, default=get_json_type).encode('utf8')
+
+    generator_weights_group = f.create_group('generator_weights')
+    discriminator_weights_group = f.create_group('discriminator_weights')
+    model.generator.save_weights_to_hdf5_group(generator_weights_group)
+    model.discriminator.save_weights_to_hdf5_group(discriminator_weights_group)
+
+    f.flush()
+    f.close()
+
+
 def load_model(filepath, custom_objects=None):
-    """Loads a Gandlf model, which includes Gandlf custom layers."""
+    """Loads a Gandlf model, which includes Gandlf custom layers.
+
+    This is done the same way as it is normally done in Keras, except that
+    the optimizer is screwy, because Gandlf uses two optimizers. The model
+    should be recompiled.
+    """
 
     if not custom_objects:
         custom_objects = {}
 
     # Adds Gandlf layers as custom objects.
-    name_cls_pairs = itertools.chain.from_iterable(
-        inspect.getmembers(sys.modules['gandlf.layers'], inspect.isclass))
+    name_cls_pairs = inspect.getmembers(sys.modules['gandlf.layers'],
+                                        inspect.isclass)
     gandlf_layers = dict((name, cls) for name, cls in name_cls_pairs
                          if name and name[0] != '_')
     custom_objects.update(gandlf_layers)
 
-    return keras_models.load_model(filepath, custom_objects=custom_objects)
+    def deserialize(obj):
+        if isinstance(obj, list):
+            return [custom_objects[v] if v in custom_objects else v
+                    for v in obj]
 
+        if isinstance(obj, dict):
+            return dict((k, custom_objects[v] if v in custom_objects else v)
+                     for k, v in obj.items())
+
+        if obj in custom_objects:
+            return custom_objects[obj]
+
+        return obj
+
+    import h5py
+    f = h5py.File(filepath, mode='r')
+
+    # Gets the correct config parts.
+    generator_config = f.attrs.get('generator_config')
+    if generator_config is None:
+        raise ValueError('No generator found in config file.')
+    generator_config = json.loads(generator_config.decode('utf-8'))
+
+    discriminator_config = f.attrs.get('discriminator_config')
+    if discriminator_config is None:
+        raise ValueError('No discriminator found in config file.')
+    discriminator_config = json.loads(discriminator_config.decode('utf-8'))
+
+    # Instantiates the models.
+    generator = keras_models.model_from_config(generator_config,
+                                               custom_objects)
+    discriminator = keras_models.model_from_config(discriminator_config,
+                                                   custom_objects)
+
+    # Sets the weights.
+    generator.load_weights_from_hdf5_group(f['generator_weights'])
+    discriminator.load_weights_from_hdf5_group(f['discriminator_weights'])
+
+    return Model(generator=generator, discriminator=discriminator)
 
 class Model(keras_models.Model):
     """The core model for training GANs.
@@ -161,15 +248,24 @@ class Model(keras_models.Model):
                   generator_discriminator.inputs[len(generator.inputs):])
         outputs = generator_discriminator.outputs * 2 + discriminator.outputs
 
-        # The model is treated as the generator by Keras.
-        super(Model, self).__init__(inputs, outputs, name)
+        # Adds gen, fake and real outputs.
+        dis_output_names = self.discriminator.output_names
+        output_names = ['%s_gen' % name for name in dis_output_names]
+        output_names += ['%s_fake' % name for name in dis_output_names]
+        output_names += ['%s_real' % name for name in dis_output_names]
 
-        # Copies the input and output names from the discriminator.
-        self.input_names = generator.input_names + discriminator.input_names
-        output_names = self.discriminator.output_names
-        self.output_names = ['%s_gen' % name for name in output_names]
-        self.output_names += ['%s_fake' % name for name in output_names]
-        self.output_names += ['%s_real' % name for name in output_names]
+        # Fixes the output layers to have the right layer names.
+        fixed_outputs = []
+        for output_name, output in zip(output_names, outputs):
+            fixed_output = copy.copy(output)
+            new_layer = copy.copy(output._keras_history[0])
+            new_keras_history = (new_layer,) + output._keras_history[1:]
+            fixed_output._keras_history = new_keras_history
+            fixed_output._keras_history[0].name = output_name
+            fixed_outputs.append(fixed_output)
+
+        # The model is treated as the generator by Keras.
+        super(Model, self).__init__(inputs, fixed_outputs, name)
 
     def _check_generator_and_discriminator(self, generator, discriminator):
         """Validates the provided models in a user-friendly way."""
@@ -619,7 +715,7 @@ class Model(keras_models.Model):
                 if is_numpy_array(arr):
                     if num_samples is None:
                         num_samples = arr.shape[0]
-                    else:
+                    elif num_samples != arr.shape[0]:
                         raise ValueError('Multiple arrays were found with '
                                          'conflicting sample sizes.')
 
@@ -873,6 +969,9 @@ class Model(keras_models.Model):
                 break
         callbacks.on_train_end()
         return self.history
+
+    def save(self, filepath, overwrite=True):
+        save_model(self, filepath, overwrite)
 
     def evaluate(self, x, y, batch_size=32, verbose=1, sample_weight=None):
         raise NotImplementedError()  # TODO: Implement this properly.
