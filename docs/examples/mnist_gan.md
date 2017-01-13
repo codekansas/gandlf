@@ -6,7 +6,7 @@ This example is a Gandlf implementation of the Keras MNIST ACGAN example, which 
 
 TODO: Add images sampled from this model.
 
-In addition to the convolutional model, a simple feed-forward model can be used for the discriminator and generator which can be trained much more quickly (feasible to run it on a laptop). Some samples from this model can be seen below:
+In addition to the convolutional model, a simple feed-forward model can be used for the discriminator and generator which can be trained much more quickly (feasible to run it on a laptop). The samples below show randomly sampled generated images from the lite model after a single epoch, which took about 100 seconds on a Macbook Pro.
 
-TODO: Add images sampled from this model.
+![MNIST GAN Lite](../resources/mnist_gan_lite.png)
 

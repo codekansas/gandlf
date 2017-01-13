@@ -152,7 +152,7 @@ def train_model(args, X_train, y_train):
                   loss_weights=loss_weights)
 
     # Model inputs.
-    inputs = {'latent': 'normal', 'real_data': X_train}
+    inputs = {'latent': args.latent_type.lower(), 'real_data': X_train}
 
     # Adds extra inputs for generator attention part.
     if gen_mode == '1d':
@@ -202,6 +202,9 @@ if __name__ == '__main__':
     model_params.add_argument('--dis_mode', type=str, metavar='STR',
                               default='none',
                               help='discriminator attn: "none", "1d", or "2d"')
+    model_params.add_argument('--latent_type', type=str, default='uniform',
+                              metavar='STR',
+                              help='"normal" or "uniform"')
 
     optimizer_params = parser.add_argument_group('optimizer params')
     optimizer_params.add_argument('--lr', type=float, default=0.0002,
@@ -222,6 +225,10 @@ if __name__ == '__main__':
         raise ValueError('"dis_mode" should be "none" (no attention), "1d" '
                          '(pay attention to labels), or "2d" (pay attention '
                          'to image). Got: %s' % args.dis_mode)
+
+    if args.latent_type.lower() not in ['normal', 'uniform']:
+       raise ValueError('Latent vector must be either "normal" or "uniform", '
+                        'got %s.' % args.latent_type.lower())
 
     if args.plot:
         try:

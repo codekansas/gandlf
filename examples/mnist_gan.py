@@ -240,7 +240,9 @@ def train_model(args, X_train, y_train, y_train_ohe):
     if supervised:
         outputs['class'] = y_train_ohe
 
-    inputs = ['uniform'] + ([] if args.unsupervised else [y_train]) + [X_train]
+    inputs = [args.latent_type.lower()]
+    inputs += ([] if args.unsupervised else [y_train])
+    inputs += [X_train]
 
     model.fit(inputs, outputs, nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
@@ -274,6 +276,9 @@ if __name__ == '__main__':
     model_params.add_argument('--unsupervised', default=False,
                               action='store_true',
                               help='if set, model doesn\'t use class labels')
+    model_params.add_argument('--latent_type', type=str, default='uniform',
+                              metavar='STR',
+                              help='"normal" or "uniform"')
 
     optimizer_params = parser.add_argument_group('optimizer params')
     optimizer_params.add_argument('--lr', type=float, default=0.0002,
@@ -292,6 +297,11 @@ if __name__ == '__main__':
             raise ImportError('To plot samples from the generator, you must '
                               'install Matplotlib (not found in path).')
 
+    latent_type = args.latent_type.lower()
+    if latent_type not in ['normal', 'uniform']:
+        raise ValueError('Latent vector must be either "normal" or "uniform", '
+                         'got %s.' % args.latent_type)
+
     # Gets training and testing data.
     (X_train, y_train), (_, _) = get_mnist_data()
 
@@ -302,17 +312,17 @@ if __name__ == '__main__':
 
     if args.plot:
         if args.unsupervised:
-            samples = model.sample(['normal'], num_samples=args.plot)
+            samples = model.sample([latent_type], num_samples=args.plot)
             for sample in samples:
                 plt.figure()
-                plt.imshow(sample.reshape((28, 28)), cmap='gray')
+                plt.imshow(-sample.reshape((28, 28)), cmap='gray')
                 plt.axis('off')
         else:
             labels = y_train[:args.plot]
-            samples = model.sample(['normal', labels])
+            samples = model.sample([latent_type, labels])
             for sample, digit in zip(samples, labels):
                 plt.figure()
-                plt.imshow(sample.reshape((28, 28)), cmap='gray')
+                plt.imshow(-sample.reshape((28, 28)), cmap='gray')
                 plt.axis('off')
                 print('Digit: %d' % digit)
         plt.show()

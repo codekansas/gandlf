@@ -38,7 +38,7 @@ def cosine(a, b):
 def sigmoid(a, b):
     """Sigmoid similarity. Maximum is 1 (a == b), minimum is 0."""
 
-    return K.sigmoid(K.sum(a * b, axis=-1)
+    return K.sigmoid(K.sum(a * b, axis=-1))
 
 
 def euclidean(a, b):
