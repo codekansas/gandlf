@@ -171,18 +171,8 @@ class RecurrentAttention1D(keras.layers.Wrapper):
         return outputs if self.layer.return_sequences else last_output
 
     def get_config(self):
-        _get_config_or_none = lambda x: x.get_config() if x else None
-
-        config = {
-            'W_regularizer': _get_config_or_none(self.W_regularizer),
-            'b_regularizer': _get_config_or_none(self.b_regularizer),
-            'attention': _get_config_or_none(self.attention),
-            'attn_activation': self.attn_activation.__name__,
-            'attn_gate_func': self.attn_gate_func.__name__,
-        }
-
-        base_config = super(RecurrentAttention1D, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        raise NotImplementedError('Saving attention components is not '
+                                  'supported yet.')
 
 
 class RecurrentAttention2D(keras.layers.Wrapper):
@@ -353,15 +343,5 @@ class RecurrentAttention2D(keras.layers.Wrapper):
         return outputs if self.layer.return_sequences else last_output
 
     def get_config(self):
-        _get_config_or_none = lambda x: x.get_config() if x else None
-
-        config = {
-            'W_regularizer': _get_config_or_none(self.W_regularizer),
-            'b_regularizer': _get_config_or_none(self.b_regularizer),
-            'attention': _get_config_or_none(self.attention),
-            'time_dist_activation': self.time_dist_activation.__name__,
-            'attn_gate_func': self.attn_gate_func.__name__,
-        }
-
-        base_config = super(RecurrentAttention2D, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        raise NotImplementedError('Saving attention components is not '
+                                  'supported yet.')

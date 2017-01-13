@@ -54,7 +54,7 @@ def build_generator(latent_size, mode):
     rnn_input = keras.layers.RepeatVector(28)(latent)
 
     rnn_1 = keras.layers.LSTM(128, return_sequences=True)
-    rnn_2 = keras.layers.LSTM(28, return_sequences=True)
+    rnn_2 = keras.layers.LSTM(28, return_sequences=True, activation='tanh')
     expand = keras.layers.Reshape((28, 28, 1), name='gen_image')
 
     if mode == '1d':  # Pay attention to class labels.
@@ -120,14 +120,19 @@ def build_discriminator(mode):
                                   output=pred_fake)
 
 
-def get_mnist_data():
+def get_mnist_data(binarize=False):
     """Puts the MNIST data in the right format."""
 
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
-    X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-    X_train = np.expand_dims(X_train, axis=-1)
 
-    X_test = (X_test.astype(np.float32) - 127.5) / 127.5
+    if binarize:
+        X_test = np.where(X_test >= 10, 1, -1)
+        X_train = np.where(X_train >= 10, 1, -1)
+    else:
+        X_train = (X_train.astype(np.float32) - 127.5) / 127.5
+        X_test = (X_test.astype(np.float32) - 127.5) / 127.5
+
+    X_train = np.expand_dims(X_train, axis=-1)
     X_test = np.expand_dims(X_test, axis=-1)
 
     y_train = np.expand_dims(y_train, axis=-1)
@@ -188,6 +193,9 @@ if __name__ == '__main__':
     training_params.add_argument('--plot', type=int, default=0,
                                  metavar='INT',
                                  help='number of generator samples to plot')
+    training_params.add_argument('--binarize', default=False,
+                                 action='store_true',
+                                 help='if set, make mnist data binary')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=100,
@@ -238,6 +246,9 @@ if __name__ == '__main__':
                               'install Matplotlib (not found in path).')
 
     # Gets training and testing data.
-    (X_train, y_train), (_, _) = get_mnist_data()
+    (X_train, y_train), (_, _) = get_mnist_data(binarize=args.binarize)
 
     model = train_model(args, X_train, y_train)
+
+    model.save(args.save_path)
+    print('Saved model:', args.save_path)
