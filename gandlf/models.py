@@ -420,8 +420,9 @@ class Model(keras_models.Model):
 
             # Adds all ways to combine two.
             for a, b, _ in itertools.permutations(['gen', 'real', 'fake']):
-                if a + '_' + b in obj:
-                    val = obj.pop(name + '_' + a + '_')
+                composite = a + '_' + b
+                if composite in obj:
+                    val = obj.pop(composite)
                     for prefix in output_names:
                         for suffix in [a, b]:
                             if prefix + '_' + suffix not in obj:

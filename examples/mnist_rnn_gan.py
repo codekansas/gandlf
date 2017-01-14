@@ -54,7 +54,8 @@ def build_generator(latent_size, mode):
     rnn_input = keras.layers.RepeatVector(28)(latent)
 
     rnn_1 = keras.layers.LSTM(128, return_sequences=True)
-    rnn_2 = keras.layers.LSTM(28, return_sequences=True, activation='tanh')
+    output = keras.layers.Dense(28, activation='tanh')
+    output = keras.layers.TimeDistributed(output)
     expand = keras.layers.Reshape((28, 28, 1), name='gen_image')
 
     if mode == '1d':  # Pay attention to class labels.
@@ -63,24 +64,19 @@ def build_generator(latent_size, mode):
         embed = keras.layers.Embedding(10, 64, init='glorot_normal')
         embedded = keras.layers.Flatten()(embed(input_class))
         rnn_1 = gandlf.layers.RecurrentAttention1D(rnn_1, embedded)
-        rnn_2 = gandlf.layers.RecurrentAttention1D(rnn_2, embedded)
-        gen_image = expand(rnn_2(rnn_1(rnn_input)))
-        return keras.models.Model(input=[latent, input_class],
-                                  output=gen_image)
+        inputs = [latent, input_class]
 
     elif mode == '2d':  # Pay attention to whole image.
         ref_image = keras.layers.Input((28, 28, 1), name='ref_image_gen')
         flat = keras.layers.Reshape((28, 28))(ref_image)
         rnn_1 = gandlf.layers.RecurrentAttention2D(rnn_1, flat)
-        rnn_2 = gandlf.layers.RecurrentAttention2D(rnn_2, flat)
-        gen_image = expand(rnn_2(rnn_1(rnn_input)))
-        return keras.models.Model(input=[latent, ref_image],
-                                  output=gen_image)
+        inputs = [latent, ref_image]
 
     else:  # No attention component.
-        gen_image = expand(rnn_2(rnn_1(rnn_input)))
-        return keras.models.Model(input=latent,
-                                  output=gen_image)
+        inputs = [latent]
+
+    gen_image = expand(output(rnn_1(rnn_input)))
+    return keras.models.Model(input=inputs, output=gen_image)
 
 
 def build_discriminator(mode):
@@ -89,35 +85,28 @@ def build_discriminator(mode):
     image = keras.layers.Input((28, 28, 1), name='real_data')
     rnn_input = keras.layers.Reshape((28, 28))(image)
 
-    rnn_1 = keras.layers.LSTM(128, return_sequences=True)
-    rnn_2 = keras.layers.LSTM(1, return_sequences=False, name='pred_fake')
+    rnn_1 = keras.layers.LSTM(128, return_sequences=False)
+    class_pred = keras.layers.Dense(1, activation='sigmoid')
 
     if mode == '1d':  # Pay attention to class labels.
         input_class = keras.layers.Input((1,), dtype='int32',
                                          name='image_class_dis')
         embed = keras.layers.Embedding(10, 64, init='glorot_normal')
         embedded = keras.layers.Flatten()(embed(input_class))
-        rnn_1_attn = gandlf.layers.RecurrentAttention1D(rnn_1, embedded)
-        rnn_2_attn = gandlf.layers.RecurrentAttention1D(rnn_2, embedded,
-                                                        name='pred_fake')
-        pred_fake = rnn_2_attn(rnn_1_attn(rnn_input))
-        return keras.models.Model(input=[image, input_class],
-                                  output=pred_fake)
+        rnn_1 = gandlf.layers.RecurrentAttention1D(rnn_1, embedded)
+        inputs = [image, input_class]
 
     elif mode == '2d':  # Pay attention to whole image.
         ref_image = keras.layers.Input((28, 28, 1), name='ref_image_dis')
         attn_reshaped = keras.layers.Reshape((28, 28))(ref_image)
-        rnn_1_attn = gandlf.layers.RecurrentAttention2D(rnn_1, attn_reshaped)
-        rnn_2_attn = gandlf.layers.RecurrentAttention2D(rnn_2, attn_reshaped,
-                                                        name='pred_fake')
-        pred_fake = rnn_2_attn(rnn_1_attn(rnn_input))
-        return keras.models.Model(input=[image, ref_image],
-                                  output=pred_fake)
+        rnn_1 = gandlf.layers.RecurrentAttention2D(rnn_1, attn_reshaped)
+        inputs = [image, ref_image]
 
     else:
-        pred_fake = rnn_2(rnn_1(rnn_input))
-        return keras.models.Model(input=image,
-                                  output=pred_fake)
+        inputs = [image]
+
+    pred_fake = class_pred(rnn_1(rnn_input))
+    return keras.models.Model(input=inputs, output=pred_fake)
 
 
 def get_mnist_data(binarize=False):
@@ -151,10 +140,7 @@ def train_model(args, X_train, y_train):
 
     # Builds the model with the right parameters.
     model = gandlf.Model(generator, discriminator)
-    loss_weights = {'pred_fake': 1.}
-    loss = {'pred_fake': 'binary_crossentropy'}
-    model.compile(optimizer=adam_optimizer, loss=loss,
-                  loss_weights=loss_weights)
+    model.compile(optimizer=adam_optimizer, loss='binary_crossentropy')
 
     # Model inputs.
     inputs = {'latent': args.latent_type.lower(), 'real_data': X_train}
@@ -172,7 +158,7 @@ def train_model(args, X_train, y_train):
         inputs['ref_image_dis'] = X_train
 
     # Model outputs.
-    outputs = {'pred_fake': '1', 'pred_fake_fake': '0'}
+    outputs = {'gen_real': '1', 'fake': '0'}
 
     model.fit(inputs, outputs, nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
@@ -184,7 +170,7 @@ if __name__ == '__main__':
         description='Recurrent GAN for MNIST digits.')
 
     training_params = parser.add_argument_group('training params')
-    training_params.add_argument('--nb_epoch', type=int, default=50,
+    training_params.add_argument('--nb_epoch', type=int, default=10,
                                  metavar='INT',
                                  help='number of epochs to train')
     training_params.add_argument('--nb_batch', type=int, default=32,
@@ -215,7 +201,7 @@ if __name__ == '__main__':
                               help='"normal" or "uniform"')
 
     optimizer_params = parser.add_argument_group('optimizer params')
-    optimizer_params.add_argument('--lr', type=float, default=0.0002,
+    optimizer_params.add_argument('--lr', type=float, default=0.001,
                                   metavar='FLOAT',
                                   help='learning rate for Adam optimizer')
     optimizer_params.add_argument('--beta', type=float, default=0.5,
@@ -249,6 +235,26 @@ if __name__ == '__main__':
     (X_train, y_train), (_, _) = get_mnist_data(binarize=args.binarize)
 
     model = train_model(args, X_train, y_train)
+
+    if args.plot:
+        gen_mode = args.gen_mode.lower()
+
+        if gen_mode == 'none':
+            samples = model.sample([args.latent_type], num_samples=args.plot)
+            for sample in samples:
+                plt.figure()
+                plt.imshow(-sample.reshape((28, 28)), cmap='gray')
+                plt.axis('off')
+
+        else:
+            labels = y_train[:args.plot]
+            samples = model.sample([args.latent_type, labels])
+            for sample, digit in zip(samples, labels):
+                plt.figure()
+                plt.imshow(-sample.reshape((28, 28)), cmap='gray')
+                plt.axis('off')
+                print('Digit: %d' % digit)
+        plt.show()
 
     model.save(args.save_path)
     print('Saved model:', args.save_path)

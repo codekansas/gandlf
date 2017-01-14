@@ -44,7 +44,7 @@ class Residual(Wrapper):
         if output_shape != input_shape:
             raise Exception('Cannot apply residual to layer "{}": '
                             'mismatching input and output shapes'
-                            '"{}" and "{}"'
+                            'input="{}" and output="{}"'
                             .format(self.layer.name, input_shape, output_shape))
         if not self.layer.built:
             self.layer.build(input_shape)
@@ -71,7 +71,7 @@ class Residual(Wrapper):
         return residual
 
     def get_config(self):
-        config = {"merge_mode": {'class_name': 'Merge',
+        config = {'merge_mode': {'class_name': 'Merge',
                                  'config': self.merge_mode.get_config()}}
         base_config = super(Residual, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
