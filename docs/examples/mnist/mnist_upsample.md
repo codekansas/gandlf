@@ -6,10 +6,10 @@ This approach makes the input space continuous `(x, y)` values rather than discr
 
 The images below show samples from the model before training:
 
-<p style="width: 100%;">
-<a href="/resources/mnist_upsample/example_1.png"><img src="/resources/mnist_upsample/example_1.png" width="33%" /></a>
-<a href="/resources/mnist_upsample/example_2.png"><img src="/resources/mnist_upsample/example_2.png" width="33%" /></a>
-<a href="/resources/mnist_upsample/example_3.png"><img src="/resources/mnist_upsample/example_3.png" width="33%" /></a>
-</p>
+![MNIST Upsample Example 1](example_1.png)
+
+![MNIST Upsample Example 2](example_2.png)
+
+![MNIST Upsample Example 3](example_3.png)
 
 The trained samples are a work in progress (waiting on access to a GPU). If you run it and get interesting results, send them my way! Otherwise, hopefully I'll have these updated in a month or so. This model could also be adapted to work with the CIFAR dataset, which can easily be imported in Keras.
