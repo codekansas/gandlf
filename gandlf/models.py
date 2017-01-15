@@ -53,7 +53,7 @@ def _get_callable(callable_type, shape_no_b):
             return np.eye(nb_classes)[idx]
 
         return _get_ohe
-    elif isinstance(callable_type, (int, float)):
+    elif isinstance(callable_type, float):
         return lambda b: np.ones(shape=(b,) + shape_no_b) * callable_type
     else:
         raise ValueError('Error when checking %s:'
@@ -585,7 +585,11 @@ class Model(keras_models.Model):
                                       str(array.shape)))
 
             elif isinstance(array, six.string_types + (int, float)):
-                callable_type = array.lower()
+                if isinstance(array, six.string_types):
+                    callable_type = array.lower()
+                else:
+                    callable_type = float(array)
+
                 array = _get_callable(callable_type, shape[1:])
 
             elif hasattr(array, '__call__'):
@@ -711,14 +715,13 @@ class Model(keras_models.Model):
         x = self._convert_input_to_list(x, input_names)
 
         # Calculates the number of training samples.
-        if num_samples is None:
-            for arr in x:
-                if is_numpy_array(arr):
-                    if num_samples is None:
-                        num_samples = arr.shape[0]
-                    elif num_samples != arr.shape[0]:
-                        raise ValueError('Multiple arrays were found with '
-                                         'conflicting sample sizes.')
+        for arr in x:
+            if is_numpy_array(arr):
+                if num_samples is None:
+                    num_samples = arr.shape[0]
+                elif num_samples != arr.shape[0]:
+                    raise ValueError('Multiple arrays were found with '
+                                     'conflicting sample sizes.')
 
         if num_samples is None:
             raise ValueError('None of the model inputs have an explicit '

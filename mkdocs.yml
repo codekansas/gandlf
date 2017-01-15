@@ -17,7 +17,6 @@ pages:
 - Losses: losses.md
 - Examples:
   - XOR: examples/xor.md
-  - MNIST GAN: examples/mnist_gan.md
-  - MNIST RNN GAN: examples/mnist_rnn_gan.md
+  - MNIST: examples/mnist.md
   - VGG16: examples/vgg16.md
 
