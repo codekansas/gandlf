@@ -17,9 +17,8 @@ pages:
 - Losses: losses.md
 - Examples:
   - Hello, world!: examples/xor.md
-  - MNIST:
-    - MNIST GAN: examples/mnist/mnist_gan.md
-    - Upsampling MNIST Digits: examples/mnist/mnist_upsample.md
-    - RNNs in GANs: examples/mnist/mnist_rnn.md
+  - MNIST GAN: examples/mnist/mnist_gan.md
+  - Upsampling MNIST Digits: examples/mnist/mnist_upsample.md
+  - RNNs in GANs: examples/mnist/mnist_rnn.md
   - Generating through VGG16: examples/vgg16.md
 
