@@ -154,7 +154,9 @@ def train_model(args, image_data, image_labels, x_idx, y_idx):
     generator = build_generator(args.nb_latent)
     discriminator = build_discriminator()
     model = gandlf.Model(generator, discriminator)
-    model.compile(optimizer=adam_optimizer, loss='binary_crossentropy',)
+    model.compile(optimizer=adam_optimizer,
+                  loss={'fake_real': 'binary_crossentropy',
+                        'gen': gandlf.losses.negative_binary_crossentropy})
 
     # Builds the inputs.
     gen_inputs = [x_idx, y_idx, args.latent_type, image_labels]
