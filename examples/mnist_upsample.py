@@ -42,35 +42,12 @@ import numpy as np
 np.random.seed(1337)
 
 
-class BiasedDense(Dense):
-    """Like a normal Dense layer, but without setting the initial bias to 0."""
-
-    def build(self, input_shape):
-        assert len(input_shape) >= 2
-        input_dim = input_shape[-1]
-        self.input_dim = input_dim
-        self.input_spec = [InputSpec(dtype=K.floatx(),
-                                     ndim='2+')]
-
-        self.W = self.add_weight((input_dim, self.output_dim),
-                                 initializer=self.init,
-                                 name='{}_W'.format(self.name),
-                                 regularizer=self.W_regularizer,
-                                 constraint=self.W_constraint)
-        self.b = self.add_weight((self.output_dim,),
-                                 initializer=self.init,
-                                 name='{}_b'.format(self.name),
-                                 regularizer=self.b_regularizer,
-                                 constraint=self.b_constraint)
-
-        if self.initial_weights is not None:
-            self.set_weights(self.initial_weights)
-            del self.initial_weights
-        self.built = True
-
-
 def wide_uniform(shape, name=None):
     value = np.random.uniform(low=-4, high=4, size=shape)
+    return K.variable(value, name=name)
+
+def wide_normal(shape, name=None):
+    value = np.random.normal(scale=4., size=shape)
     return K.variable(value, name=name)
 
 
@@ -83,6 +60,9 @@ def build_generator(latent_size):
     r = merge([x, y],
               mode=lambda x: K.sqrt(x[0] * x[1]),
               output_shape=lambda x: x[0])
+    s = merge([x, y],
+              mode=lambda x: x[0] * x[1],
+              output_shape=lambda x: x[0])
 
     # The latent vector and image class (constant across points).
     latent = Input((latent_size,), name='latent')
@@ -91,10 +71,10 @@ def build_generator(latent_size):
     image_emb = Flatten()(image_emb)
 
     # Merges the inputs to a single input.
-    hidden = merge([x, y, r, latent, image_emb], mode='concat')
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
+    hidden = merge([x, y, s, r, latent, image_emb], mode='concat')
+    hidden = Dense(64, wide_normal, activation='tanh')(hidden)
+    hidden = Dense(64, wide_normal, activation='tanh')(hidden)
+    hidden = Dense(64, wide_normal, activation='tanh')(hidden)
 
     # Output layer.
     output = Dense(1, activation='tanh')(hidden)
@@ -111,6 +91,9 @@ def build_discriminator():
     r = merge([x, y],
               mode=lambda x: K.sqrt(x[0] * x[1]),
               output_shape=lambda x: x[0])
+    s = merge([x, y],
+              mode=lambda x: x[0] * x[1],
+              output_shape=lambda x: x[0])
     pixel = Input((1,), name='pixel')
 
     image_cls = Input((1,), dtype='int32', name='dis_image_cls')
@@ -118,13 +101,13 @@ def build_discriminator():
     image_emb = Flatten()(image_emb)
 
     # The input values.
-    hidden = merge([x, y, r, pixel, image_emb], mode='concat')
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
-    hidden = BiasedDense(64, wide_uniform, activation='tanh')(hidden)
+    hidden = merge([x, y, s, r, pixel, image_emb], mode='concat')
+    hidden = Dense(64, wide_uniform, activation='tanh')(hidden)
+    hidden = Dense(64, wide_uniform, activation='tanh')(hidden)
+    hidden = Dense(64, wide_uniform, activation='tanh')(hidden)
 
     # Output layer.
-    output = BiasedDense(1, activation='sigmoid', name='src')(hidden)
+    output = Dense(1, activation='sigmoid', name='src')(hidden)
 
     return Model(input=[pixel, x, y, image_cls], output=output)
 
@@ -155,8 +138,7 @@ def train_model(args, image_data, image_labels, x_idx, y_idx):
     discriminator = build_discriminator()
     model = gandlf.Model(generator, discriminator)
     model.compile(optimizer=adam_optimizer,
-                  loss={'fake_real': 'binary_crossentropy',
-                        'gen': gandlf.losses.negative_binary_crossentropy})
+                  loss='binary_crossentropy')
 
     # Builds the inputs.
     gen_inputs = [x_idx, y_idx, args.latent_type, image_labels]
@@ -178,20 +160,22 @@ def plot_upsampled_digit(model, upsample_factor, nb_latent, output=None):
 
     # Creates the upsampled indices.
     num = 28 * upsample_factor
-    x_up = np.tile(np.linspace(-1, 1, num=num), (num, 1))
-    y_up = np.transpose(x_up, (1, 0))
-    x_up = np.reshape(x_up, (-1, 1))
-    y_up = np.reshape(y_up, (-1, 1))
-
-    # Gets a random label.
-    label = np.tile([np.random.randint(0, 10)], (x_up.shape[0], 1))
-
-    # Gets a random latent vector.
-    latent_vec = np.tile(np.random.uniform(size=(nb_latent,)),
-                         (x_up.shape[0], 1))
 
     # Samples from the model.
     if output is None:
+        x_up = np.tile(np.linspace(-1, 1, num=num), (num, 1))
+        y_up = np.transpose(x_up, (1, 0))
+        x_up = np.reshape(x_up, (-1, 1))
+        y_up = np.reshape(y_up, (-1, 1))
+
+        # Gets a random label.
+        label = np.random.randint(0, 10)
+        print(label)  # Lets the user know the target label.
+        label = np.tile([label], (x_up.shape[0], 1))
+
+        # Gets a random latent vector.
+        latent_vec = np.tile(np.random.uniform(size=(nb_latent,)),
+                             (x_up.shape[0], 1))
         output = model.sample([x_up, y_up, latent_vec, label])
 
     # Reshapes the output to get an image.
