@@ -126,7 +126,7 @@ def build_discriminator():
     # Output layer.
     output = BiasedDense(1, activation='sigmoid', name='src')(hidden)
 
-    return Model(input=[x, y, pixel, image_cls], output=output)
+    return Model(input=[pixel, x, y, image_cls], output=output)
 
 
 def get_mnist_data(binarize=False):
@@ -160,7 +160,7 @@ def train_model(args, image_data, image_labels, x_idx, y_idx):
 
     # Builds the inputs.
     gen_inputs = [x_idx, y_idx, args.latent_type, image_labels]
-    dis_inputs = [x_idx, y_idx, image_data, image_labels]
+    dis_inputs = [image_data, x_idx, y_idx, image_labels]
     inputs = gen_inputs + dis_inputs
 
     # Builds the targets (gen and real -> 1, fake -> 0).
