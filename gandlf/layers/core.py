@@ -59,7 +59,7 @@ class BatchSimilarity(keras.layers.Layer):
         super(BatchSimilarity, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        if len(input_shape) == 2:
+        if len(input_shape) != 2:
             raise ValueError('The input to a BatchSimilarity layer must be '
                              '2D. Got %d dims.' % len(input_shape))
 
@@ -79,11 +79,11 @@ class BatchSimilarity(keras.layers.Layer):
         return K.concatenate(sims, axis=-1)
 
     def get_output_shape_for(self, input_shape):
-        if len(input_shape) < 2:
+        if len(input_shape) != 2:
             raise ValueError('The input to a BatchSimilarity layer must be '
                              '2D. Got %d dims.' % len(input_shape))
         output_shape = list(input_shape)
-        output_shape[-1] = len(self.similarities)
+        output_shape[-1] = sum(self.n)
         return tuple(output_shape)
 
     def get_config(self):
