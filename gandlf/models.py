@@ -7,11 +7,9 @@ import itertools
 import json
 import sys
 
-from keras import callbacks as keras_callbacks
-from keras import metrics as keras_metrics
-from keras import models as keras_models
-from keras import optimizers as keras_optimizers
-from keras.engine import training
+import keras
+from keras.engine import training as keras_training
+
 import six
 
 import keras.backend as K
@@ -117,7 +115,7 @@ def save_model(model, filepath, overwrite=True):
     from keras import __version__ as keras_version
 
     if not overwrite and os.path.isfile(filepath):
-        proceed = keras_models.ask_to_proceed_with_overwrite(filepath)
+        proceed = keras.models.ask_to_proceed_with_overwrite(filepath)
         if not proceed:
             return
 
@@ -188,9 +186,9 @@ def load_model(filepath, custom_objects=None):
     discriminator_config = json.loads(discriminator_config.decode('utf-8'))
 
     # Instantiates the models.
-    generator = keras_models.model_from_config(generator_config,
+    generator = keras.models.model_from_config(generator_config,
                                                custom_objects)
-    discriminator = keras_models.model_from_config(discriminator_config,
+    discriminator = keras.models.model_from_config(discriminator_config,
                                                    custom_objects)
 
     # Sets the weights.
@@ -199,7 +197,7 @@ def load_model(filepath, custom_objects=None):
 
     return Model(generator=generator, discriminator=discriminator)
 
-class Model(keras_models.Model):
+class Model(keras.models.Model):
     """The core model for training GANs.
 
     Both a generator and a discriminator are needed to build the model.
@@ -238,7 +236,7 @@ class Model(keras_models.Model):
         gen_dis_outputs = discriminator(generator.outputs +
                                         discriminator.inputs[num_generated:])
 
-        generator_discriminator = keras_models.Model(
+        generator_discriminator = keras.models.Model(
             input=generator.inputs + discriminator.inputs[num_generated:],
             output=gen_dis_outputs,
             name='generator_around_discriminator')
@@ -271,8 +269,8 @@ class Model(keras_models.Model):
         """Validates the provided models in a user-friendly way."""
 
         # Checks that both are Keras models.
-        if not (isinstance(generator, keras_models.Model) and
-                isinstance(discriminator, keras_models.Model)):
+        if not (isinstance(generator, keras.models.Model) and
+                isinstance(discriminator, keras.models.Model)):
             raise ValueError('The generator and discriminator should both '
                              'be Keras models. Got discriminator=%s, '
                              'generator=%s' % (type(discriminator),
@@ -332,7 +330,7 @@ class Model(keras_models.Model):
 
             y_true = self.targets[index]
             y_pred = self.outputs[index]
-            weighted_loss = training.weighted_objective(
+            weighted_loss = keras_training.weighted_objective(
                 self.loss_functions[index])
             sample_weight = self.sample_weights[index]
             mask = masks[index]
@@ -360,7 +358,7 @@ class Model(keras_models.Model):
         for i, name in enumerate(self.output_names, i):
             self.metrics_names[i] = name + '_loss'
 
-        nested_metrics = training.collect_metrics(self.metrics,
+        nested_metrics = keras_training.collect_metrics(self.metrics,
                                                   self.output_names)
 
         for name, output_metrics in zip(self.output_names, nested_metrics):
@@ -370,7 +368,7 @@ class Model(keras_models.Model):
                 if metric == 'accuracy' or metric == 'acc':
                     self.metrics_names[i] = name + '_acc'
                 else:
-                    metric_fn = keras_metrics.get(metric)
+                    metric_fn = keras.metrics.get(metric)
                     self.metrics_names[i] = name + '_' + metric_fn.__name__
 
     def _cast_outputs_to_all_modes(self, obj):
@@ -492,7 +490,7 @@ class Model(keras_models.Model):
                                  'generator_optimizer]. Got: %s' %
                                  str(optimizer))
             optimizer, gen_optimizer = optimizer
-            self.gen_optimizer = keras_optimizers.get(gen_optimizer)
+            self.gen_optimizer = keras.optimizers.get(gen_optimizer)
 
         # Call the "parent" compile method.
         super(Model, self).compile(optimizer=optimizer,
@@ -662,16 +660,16 @@ class Model(keras_models.Model):
             check_batch_dim=False, exception_prefix='model output')
         y_exp = [y_inst(nb_train_samples) if hasattr(y_inst, '__call__')
                  else y_inst for y_inst in y]
-        sample_weights = training.standardize_sample_weights(
+        sample_weights = keras_training.standardize_sample_weights(
             sample_weight, output_names)
-        class_weights = training.standardize_class_weights(
+        class_weights = keras_training.standardize_class_weights(
             class_weight, output_names)
-        sample_weights = [training.standardize_weights(ref, sw, cw, mode)
+        sample_weights = [keras_training.standardize_weights(ref, sw, cw, mode)
                           for ref, sw, cw, mode
                           in zip(y_exp, sample_weights, class_weights,
                                  self.sample_weight_modes)]
 
-        training.check_loss_and_target_compatibility(
+        keras_training.check_loss_and_target_compatibility(
             y_exp, self.loss_functions, output_shapes)
 
         return x, y, sample_weights, nb_train_samples
@@ -906,12 +904,12 @@ class Model(keras_models.Model):
 
         index_array = np.arange(nb_train_samples)
 
-        self.history = keras_callbacks.History()
-        callbacks = [keras_callbacks.BaseLogger()] + (callbacks or [])
+        self.history = keras.callbacks.History()
+        callbacks = [keras.callbacks.BaseLogger()] + (callbacks or [])
         callbacks += [self.history]
         if verbose:
-            callbacks += [keras_callbacks.ProgbarLogger()]
-        callbacks = keras_callbacks.CallbackList(callbacks)
+            callbacks += [keras.callbacks.ProgbarLogger()]
+        callbacks = keras.callbacks.CallbackList(callbacks)
 
         out_labels = out_labels or []
 
@@ -937,11 +935,11 @@ class Model(keras_models.Model):
         for epoch in range(initial_epoch, nb_epoch):
             callbacks.on_epoch_begin(epoch)
             if shuffle == 'batch':
-                index_array = training.batch_shuffle(index_array, batch_size)
+                index_array = keras_training.batch_shuffle(index_array, batch_size)
             elif shuffle:
                 np.random.shuffle(index_array)
 
-            batches = training.make_batches(nb_train_samples, batch_size)
+            batches = keras_training.make_batches(nb_train_samples, batch_size)
             epoch_logs = {}
             for batch_index, (batch_start, batch_end) in enumerate(batches):
                 batch_ids = index_array[batch_start:batch_end]
