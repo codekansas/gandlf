@@ -21,6 +21,7 @@ from keras.datasets import mnist
 
 from keras.engine import InputSpec
 
+from keras.layers import Convolution2D
 from keras.layers import Dense
 from keras.layers import Dropout
 from keras.layers import Embedding
@@ -43,8 +44,9 @@ np.random.seed(1337)
 
 
 def wide_normal(shape, name=None):
-    value = np.random.normal(scale=2., size=shape)
+    value = np.random.normal(scale=4., size=shape)
     return K.variable(value, name=name)
+
 
 class WideDense(Dense):
     """Hack to enable saving / loading with custom function."""
@@ -53,15 +55,30 @@ class WideDense(Dense):
         kwargs['init'] = wide_normal
         super(WideDense, self).__init__(output_dim, **kwargs)
 
+    def build(self, input_shape):
+      assert len(input_shape) >= 2
+      input_dim = input_shape[-1]
+      self.input_dim = input_dim
+      self.input_spec = [InputSpec(dtype=K.floatx(), ndim='2+')]
+      self.W = self.add_weight((input_dim, self.output_dim),
+          initializer=self.init,
+          name='{}_W'.format(self.name),
+          regularizer=self.W_regularizer,
+          constraint=self.W_constraint)
+      self.b = self.add_weight((self.output_dim,),
+          initializer=self.init,
+          name='{}_b'.format(self.name),
+          regularizer=self.b_regularizer,
+          constraint=self.b_constraint)
+      self.built = True
+
+
 def build_generator(latent_size):
     """Builds the generator model."""
 
     # The x, y inputs.
     x = Input((28 * 28, 1), name='gen_x')
     y = Input((28 * 28, 1), name='gen_y')
-    r = merge([x, y],
-          mode=lambda x: K.sqrt(x[0] * x[1]),
-          output_shape=lambda x: x[0])
 
     # The latent vector and image class (constant across points).
     latent = Input((latent_size,), name='latent')
@@ -69,14 +86,14 @@ def build_generator(latent_size):
 
     # These inputs are constant over all points.
     time_const = merge([latent, image_cls], mode='concat')
+    time_const = Dense(3)(time_const)
     time_const = RepeatVector(28 * 28)(time_const)
 
     # Merges the inputs to a single input.
-    hidden = merge([x, y, r, time_const], mode='concat')
-    hidden = TimeDistributed(Dense(256, activation='tanh'))(hidden)
-    hidden = gandlf.layers.PermanentDropout(0.3)(hidden)
-    hidden = TimeDistributed(Dense(256, activation='tanh'))(hidden)
-    hidden = gandlf.layers.PermanentDropout(0.3)(hidden)
+    hidden = merge([x, y, time_const], mode='concat')
+
+    for _ in range(4):
+      hidden = TimeDistributed(WideDense(64, activation='tanh'))(hidden)
 
     # Output layer.
     output = TimeDistributed(Dense(1, activation='tanh'))(hidden)
@@ -88,19 +105,26 @@ def build_discriminator():
     """Builds the discriminator model."""
 
     pixel = Input((28 * 28, 1), name='pixel')
-    flat = Flatten()(pixel)
-    sim = gandlf.layers.BatchSimilarity('rbf', n=5)(flat)
 
     # This input is constant over all points.
     image_cls = Input((10,), name='dis_image_cls')
+    d = Dense(10, activation='tanh')(image_cls)
+    d = RepeatVector(28 * 28)(d)
 
     # The input values.
-    hidden = merge([flat, sim, image_cls], mode='concat')
-    hidden = Dense(256, activation='tanh')(hidden)
-    hidden = Dense(256, activation='tanh')(hidden)
+    hidden = merge([pixel, d], mode='concat', concat_axis=-1)
+    hidden = Reshape((28, 28, 11))(hidden)
+
+    for _ in range(3):
+      hidden = Convolution2D(32, 3, 3,
+          border_mode='same',
+          subsample=(2, 2))(hidden)
+      hidden = LeakyReLU()(hidden)
+
+    hidden = Flatten()(hidden)
 
     # Output layer.
-    output = Dense(1, activation='sigmoid', name='src')(hidden)
+    output = Dense(1, activation='tanh', name='src')(hidden)
 
     return Model(input=[pixel, image_cls], output=output)
 
@@ -147,7 +171,8 @@ def train_model(args, image_data, image_labels, x_idx, y_idx):
     # Train the model.
     model.fit(inputs, targets,
               nb_epoch=args.nb_epoch,
-              batch_size=args.nb_batch)
+              batch_size=args.nb_batch,
+              callbacks=[gandlf.callbacks.AdaptiveLearningRate(0.001, 0.01)])
 
     return model
 
@@ -183,7 +208,6 @@ def plot_upsampled_digit(model, upsample_factor, nb_latent, output=None):
     plt.figure()
     plt.imshow(-output, cmap='gray', interpolation='bicubic')
     plt.axis('off')
-    plt.show()
 
 
 if __name__ == '__main__':
@@ -260,6 +284,8 @@ if __name__ == '__main__':
     # Plots samples from the model.
     for i in range(args.plot):
         plot_upsampled_digit(model, args.factor, args.nb_latent)
+    
+    plt.show()
 
     # Saves the model.
     model.save(args.save_path)

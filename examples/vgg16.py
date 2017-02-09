@@ -59,13 +59,11 @@ def build_generator(latent_size, nb_classes):
 
     fake_image = cnn(h)
 
-    generator = keras.models.Model(input=latent, output=fake_image,
-                                   name='generator')
     generator_weighted = keras.models.Model(input=[latent, image_class],
                                             output=fake_image,
                                             name='generator_weighted')
 
-    return generator, generator_weighted
+    return generator_weighted
 
 
 def train_model(args):
@@ -80,15 +78,15 @@ def train_model(args):
     # Builds the Adam optimizer according to our specifications.
     adam_optimizer = keras.optimizers.Adam(lr=args.lr, beta_1=args.beta)
 
-    generator, generator_weighted = build_generator(args.nb_latent, nb_classes)
+    generator = build_generator(args.nb_latent, nb_classes)
     discriminator = vgg16.VGG16(weights='imagenet', include_top=True)
 
-    model = gandlf.Model(generator_weighted, discriminator)
+    model = gandlf.Model(generator, discriminator)
     model.discriminator.trainable = False
 
     # Compiles the model using the Adam optimizer and categorical crossentropy.
     model.compile(optimizer=adam_optimizer, loss=['categorical_crossentropy'],
-                  metrics=['accuracy'])
+                  metrics=['acc'])
 
     # Randomly selects some classes to generate.
     classes = np.random.randint(0, nb_classes, (args.nb_batch,))
@@ -100,7 +98,7 @@ def train_model(args):
     model.fit({'latent': 'normal', 'image_class': classes, 'input_1': 'ones'},
               [classes_ohe], nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
 
-    return model, generator
+    return model
 
 
 if __name__ == '__main__':
@@ -114,7 +112,8 @@ if __name__ == '__main__':
     training_params.add_argument('--nb_batch', type=int, default=32,
                                  metavar='INT',
                                  help='number of samples per batch')
-    training_params.add_argument('--plot', default=False, action='store_true',
+    training_params.add_argument('--plot', type=int, default=0,
+                                 metavar='INT',
                                  help='If set, plot samples from generator.')
 
     model_params = parser.add_argument_group('model params')
@@ -144,11 +143,10 @@ if __name__ == '__main__':
             raise ImportError('To plot samples from the generator, you must '
                               'install Matplotlib (not found in path).')
 
-    model, generator = train_model(args)
+    model = train_model(args)
 
     if args.plot:
-        random_inputs = np.random.normal(shape=(args.plot, args.nb_latent))
-        samples = generator.predict([random_inputs])
+        samples = model.sample(['normal', 4], num_samples=args.plot)
 
         for sample in samples:
             sample = sample.reshape((224, 224, 3))
