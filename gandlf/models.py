@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from . import losses as gandlf_losses
+
 import copy
 import inspect
 import itertools
@@ -371,7 +373,7 @@ class Model(keras.models.Model):
                     metric_fn = keras.metrics.get(metric)
                     self.metrics_names[i] = name + '_' + metric_fn.__name__
 
-    def _cast_outputs_to_all_modes(self, obj):
+    def _cast_outputs_to_all_modes(self, obj, module=None):
         output_names = self.discriminator.output_names
 
         if isinstance(obj, dict):
@@ -409,8 +411,8 @@ class Model(keras.models.Model):
                             obj[prefix + '_' + name] = val
 
             # Discriminator -> (fake, real).
-            if name == 'dis':
-                val = obj.pop(name)
+            if 'dis' in obj:
+                val = obj.pop('dis')
                 for suffix in ['_fake', '_real']:
                     for prefix in output_names:
                         if prefix + suffix not in obj:
@@ -426,6 +428,12 @@ class Model(keras.models.Model):
                             if prefix + '_' + suffix not in obj:
                                 obj[prefix + '_' + suffix] = val
 
+            if module is not None:
+                for k in obj.keys():
+                    if (isinstance(obj[k], six.string_types) and
+                        hasattr(module, obj[k])):
+                        obj[k] = getattr(module, obj[k])
+
         elif isinstance(obj, (list, tuple)):
             if len(obj) == len(output_names):
                 obj = list(obj) * 3
@@ -439,6 +447,16 @@ class Model(keras.models.Model):
                 obj = ([obj[0]] * len(output_names) +
                        [obj[1]] * len(output_names) +
                        [obj[2]] * len(output_names))
+
+            if module is not None:
+                obj_fixed = []
+                for k in obj:
+                    if (isinstance(k, six.string_types) and
+                        hasattr(module, k)):
+                        obj_fixed.append(getattr(module, k))
+                    else:
+                        obj_fixed.append(k)
+                obj = obj_fixed
 
         return obj
 
@@ -476,7 +494,7 @@ class Model(keras.models.Model):
         # Preprocess the losses and loss weights, so that one value can be
         # specified for all three training modes  (generator, discriminator
         # fake, and discriminator real).
-        loss = self._cast_outputs_to_all_modes(loss)
+        loss = self._cast_outputs_to_all_modes(loss, gandlf_losses)
         loss_weights = self._cast_outputs_to_all_modes(loss_weights)
 
         self.gen_optimizer = None
@@ -918,8 +936,8 @@ class Model(keras.models.Model):
         else:
             callback_model = self
 
-        callbacks._set_model(callback_model)
-        callbacks._set_params({
+        callbacks.set_model(callback_model)
+        callbacks.set_params({
             'batch_size': batch_size,
             'nb_epoch': nb_epoch,
             'nb_sample': nb_train_samples,

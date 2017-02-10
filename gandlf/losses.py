@@ -15,16 +15,16 @@ def negative_binary_crossentropy(y_true, y_pred):
     return -K.mean(K.binary_crossentropy(y_pred, 1 - y_true), axis=-1)
 
 
-def maximize(y_true, _):
-    """Maximizes y_true, regardless of y_pred."""
+def maximize(_, y_pred):
+    """Maximizes y_pred, regardless of y_true."""
 
-    return -K.mean(y_true)
+    return -K.mean(y_pred)
 
 
-def minimize(y_true, _):
-    """Minimizes y_true, regardless of y_pred."""
+def minimize(_, y_pred):
+    """Minimizes y_pred, regardless of y_true."""
 
-    return K.mean(y_true)
+    return K.mean(y_pred)
 
 
 def rbf_moment_matching(y_true, y_pred, sigmas=[2, 5, 10, 20, 40, 80]):
