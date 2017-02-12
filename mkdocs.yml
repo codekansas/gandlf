@@ -18,7 +18,6 @@ pages:
 - Examples:
   - Hello, world!: examples/xor.md
   - MNIST GAN: examples/mnist/mnist_gan.md
-  - Upsampling MNIST Digits: examples/mnist/mnist_upsample.md
-  - RNNs in GANs: examples/mnist/mnist_rnn.md
+  - Upsampling GAN: examples/upsample.md
   - Generating through VGG16: examples/vgg16.md
 
