@@ -2,14 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Using generative adversarial networks to super-resolve pictures.
-
-Usage: ./upsample_gan.py --dataset=<mnist,cifar> --nb_epoch N
-
-For more options: ./upsample_gan.py --help
-
-This example shows how to use a GAN to upsample images. There is a popular
-project on Github which does this called "neural enhance":
-    https://github.com/alexjc/neural-enhance
 """
 
 from __future__ import print_function
@@ -45,9 +37,9 @@ def build_generator(small_shape, up_factor):
     # Merge latent with base image.
     hidden = keras.layers.merge([low_dim, latent], mode='concat')
     hidden = keras.layers.UpSampling2D((up_factor, up_factor))(hidden)
-    hidden = keras.layers.Convolution2D(16, 5, 5, border_mode='same')(hidden)
+    hidden = keras.layers.Convolution2D(64, 5, 5, border_mode='same')(hidden)
     hidden = keras.layers.Activation('tanh')(hidden)
-    hidden = keras.layers.Convolution2D(16, 5, 5, border_mode='same')(hidden)
+    hidden = keras.layers.Convolution2D(64, 5, 5, border_mode='same')(hidden)
     hidden = keras.layers.Activation('tanh')(hidden)
 
     # activation on last output.
@@ -76,11 +68,11 @@ def build_discriminator(small_shape, up_factor):
     hidden = keras.layers.merge([image, low_exp],
                                 mode='concat', concat_axis=-1)
 
-    hidden = keras.layers.Convolution2D(16, 5, 5)(hidden)
+    hidden = keras.layers.Convolution2D(64, 5, 5)(hidden)
     hidden = keras.layers.MaxPooling2D((2, 2))(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
 
-    hidden = keras.layers.Convolution2D(16, 5, 5)(hidden)
+    hidden = keras.layers.Convolution2D(64, 5, 5)(hidden)
     hidden = keras.layers.MaxPooling2D((2, 2))(hidden)
     hidden = keras.layers.LeakyReLU()(hidden)
 
@@ -89,7 +81,8 @@ def build_discriminator(small_shape, up_factor):
 
     # Pooling for classification layer.
     hidden = keras.layers.GlobalAveragePooling2D()(hidden)
-    fake = keras.layers.Dense(1, activation='sigmoid', name='src')(hidden)
+    fake = keras.layers.Dense(1, W_regularizer='l2',
+                              activation='sigmoid', name='src')(hidden)
 
     return keras.models.Model(input=[image, low_dim],
                               output=fake,
@@ -179,7 +172,7 @@ if __name__ == '__main__':
     generator = build_generator(X_low_dim.shape[1:], up_factor)
     discriminator = build_discriminator(X_low_dim.shape[1:], up_factor)
     model = gandlf.Model(generator=generator, discriminator=discriminator)
-    optimizer = keras.optimizers.Adam(1e-3)
+    optimizer = keras.optimizers.Adam(1e-4)
     loss = {'dis': 'binary_crossentropy',
             'gen': 'binary_crossentropy'}
     model.compile(loss=loss, optimizer=optimizer)
@@ -202,18 +195,23 @@ if __name__ == '__main__':
     print('Saved generator weights to "%s"' % args.generator_path)
 
     # Samples from the model.
-    X_inputs = [np.stack([X_low_dim[0] for _ in range(3)]),
-                np.stack([X_data[0] for _ in range(3)])]
+    # X_inputs = [np.stack([X_low_dim[0] for _ in range(3)]),
+    #             np.stack([X_data[0] for _ in range(3)])]
+    X_inputs = [X_low_dim[:3], X_data[:3]]
     for _ in range(4):
         X_inputs.append(upsample(X_inputs[-1], args.generator_path, up_factor))
         print('New shape:', X_inputs[-1].shape)
 
-    for j in range(3):
-        plt.figure()
+    # for j in range(3):
+    #     plt.figure()
+    #
+    #     for i in range(6):
+    #         plt.subplot(2, 3, i + 1)
+    #         plt.imshow(-np.squeeze(X_inputs[i][j]), cmap='gray')
+    #         plt.axis('off')
+    #
+    # plt.show()
 
-        for i in range(6):
-            plt.subplot(2, 3, i + 1)
-            plt.imshow(-np.squeeze(X_inputs[i][j]), cmap='gray')
-            plt.axis('off')
-
-    plt.show()
+    plt.figure(dpi=100)
+    plt.imshow(-np.squeeze(X_inputs[-1][0]), cmap='gray')
+    plt.savefig('/home/judgingmoloch/Desktop/asdf.png', dpi=300)

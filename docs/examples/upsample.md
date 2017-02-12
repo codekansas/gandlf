@@ -4,3 +4,7 @@ This is an implementation of the [neural-enhance](https://github.com/alexjc/neur
 
 [![MNIST GAN Upsampled](/resources/upsampling/resolved_five.png)](/resources/upsampling/resolved_five.png)
 
+The same process can be done on CIFAR images:
+
+[![CIFAR GAN Upsampled](/resources/upsampling/resolved_bear.png)](/resources/upsampling/resolved_bear.png)
+

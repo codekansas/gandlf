@@ -16,6 +16,3 @@ In addition to the convolutional model, a simple feed-forward model can be used 
 
 [![MNIST GAN Lite](/resources/mnist_gan_lite.png)](/resources/mnist_gan_lite.png)
 
-The gif below shows the representation of a 6 when the model is fed latent vectors that interpolate between two points. Because the lite model is not convolutional, the interpolation is not very smooth.
-
-[![MNIST GAN Lite Six Gif](/resources/mnist_gan_lite_six.gif)](/resources/mnist_gan_lite_six.gif)
