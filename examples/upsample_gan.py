@@ -179,7 +179,7 @@ if __name__ == '__main__':
     generator = build_generator(X_low_dim.shape[1:], up_factor)
     discriminator = build_discriminator(X_low_dim.shape[1:], up_factor)
     model = gandlf.Model(generator=generator, discriminator=discriminator)
-    optimizer = keras.optimizers.Adam(1e-4)
+    optimizer = keras.optimizers.Adam(1e-3)
     loss = {'dis': 'binary_crossentropy',
             'gen': 'binary_crossentropy'}
     model.compile(loss=loss, optimizer=optimizer)
