@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Uses pre-trained VGG16 weights to generate images.
+"""
+Uses pre-trained VGG16 weights to generate images.
 
 While this is not strictly a GAN (since no real data is being fed for the
 model to discriminate against), it demonstrates how Gandlf can be combined
@@ -10,12 +11,14 @@ with pre-trained weights to do creative things.
 from __future__ import print_function
 
 import argparse
+import os
 
 import keras
 from keras.applications import vgg16
 
 import gandlf
 import numpy as np
+import matplotlib.pyplot as plt
 
 # For repeatability.
 np.random.seed(1337)
@@ -27,43 +30,38 @@ keras.backend.set_image_dim_ordering('tf')
 def build_generator(latent_size, nb_classes):
     """Builds the generator model."""
 
-    cnn = keras.models.Sequential()
+    latent = keras.layers.Input(shape=(latent_size,))
+    img_class = keras.layers.Input(shape=(nb_classes,))
 
-    cnn.add(keras.layers.Dense(14 * 14 * 16, input_dim=latent_size))
-    cnn.add(keras.layers.LeakyReLU())
+    x = keras.layers.Dense(latent_size)(img_class)
+    x = keras.layers.merge([latent, x], mode='mul')
 
-    cnn.add(keras.layers.Reshape((14, 14, 16)))
+    # First Dense layer.
+    x = keras.layers.Dense(512, init='glorot_normal')(latent)
+    x = keras.layers.Activation('tanh')(x)
 
-    cnn.add(keras.layers.UpSampling2D(size=(4, 4)))
-    cnn.add(keras.layers.Convolution2D(256, 5, 5, border_mode='same',
-                                       init='glorot_normal'))
-    cnn.add(keras.layers.LeakyReLU())
+    # Second Dense layer.
+    x = keras.layers.Dense(7 * 7 * 10, init='glorot_normal')(x)
+    x = keras.layers.Activation('tanh')(x)
+    x = keras.layers.Reshape((7, 7, 10))(x)
 
-    cnn.add(keras.layers.UpSampling2D(size=(4, 4)))
-    cnn.add(keras.layers.Convolution2D(256, 5, 5, border_mode='same',
-                                       init='glorot_normal'))
-    cnn.add(keras.layers.LeakyReLU())
+    # Upsample to get the final image.
+    for _ in range(5):
+        x = keras.layers.UpSampling2D((2, 2))(x)
+        x = keras.layers.GaussianNoise(0.01)(x)
+        x = keras.layers.Convolution2D(64, 5, 5, border_mode='same')(x)
+        x = keras.layers.Activation('tanh')(x)
+        x = keras.layers.Convolution2D(64, 5, 5, border_mode='same')(x)
+        x = keras.layers.Activation('tanh')(x)
 
-    cnn.add(keras.layers.Convolution2D(3, 2, 2, border_mode='same',
-                                       activation='tanh', init='glorot_normal'))
+    x = keras.layers.Convolution2D(128, 1, 1)(x)
+    x = keras.layers.Activation('tanh')(x)
+    x = keras.layers.Convolution2D(3, 1, 1)(x)
+    output = keras.layers.Activation('sigmoid')(x)
 
-    latent = keras.layers.Input(shape=(latent_size,), name='latent')
-    image_class = keras.layers.Input(shape=(1,), dtype='int32',
-                                     name='image_class')
-
-    # Shapes the latent input to make it easier to generate the right classes.
-    embed = keras.layers.Embedding(nb_classes, latent_size,
-                                   init='glorot_normal')
-    cls = keras.layers.Flatten()(embed(image_class))
-    h = keras.layers.merge([latent, cls], mode='mul')
-
-    fake_image = cnn(h)
-
-    generator_weighted = keras.models.Model(input=[latent, image_class],
-                                            output=fake_image,
-                                            name='generator_weighted')
-
-    return generator_weighted
+    return keras.models.Model(input=[latent, img_class],
+                              output=output,
+                              name='generator')
 
 
 def train_model(args):
@@ -82,21 +80,24 @@ def train_model(args):
     discriminator = vgg16.VGG16(weights='imagenet', include_top=True)
 
     model = gandlf.Model(generator, discriminator)
-    model.discriminator.trainable = False
-
-    # Compiles the model using the Adam optimizer and categorical crossentropy.
-    model.compile(optimizer=adam_optimizer, loss=['categorical_crossentropy'],
-                  metrics=['acc'])
+    model.discriminator.trainable = False  # Turn off discriminator updates.
 
     # Randomly selects some classes to generate.
-    classes = np.random.randint(0, nb_classes, (args.nb_batch,))
-    eye = np.eye(nb_classes, dtype='int16')
-    classes_ohe = eye[classes]
-    classes = np.expand_dims(classes, -1)
+    nb_points = args.nb_batch * args.batch_size
+    classes = np.random.randint(0, nb_classes, (nb_points,))
+    classes = np.eye(nb_classes, dtype='int16')[classes]
+
+    # Compiles the model using the Adam optimizer and categorical crossentropy.
+    model.compile(optimizer=adam_optimizer, loss=['categorical_crossentropy'])
+
+    # Loads the weights, if they exist.
+    if os.path.exists(args.save_path) and not args.reset_weights:
+        model.generator.load_weights(args.save_path)
+        print('Loaded weights from "%s"' % args.save_path)
 
     # Trains the model, ignoring discriminator.
-    model.fit({'latent': 'normal', 'image_class': classes, 'input_1': 'ones'},
-              [classes_ohe], nb_epoch=args.nb_epoch, batch_size=args.nb_batch)
+    model.fit(['normal', classes, 'ones'], [classes],
+              nb_epoch=args.nb_epoch, batch_size=args.batch_size)
 
     return model
 
@@ -109,12 +110,15 @@ if __name__ == '__main__':
     training_params.add_argument('--nb_epoch', type=int, default=50,
                                  metavar='INT',
                                  help='number of epochs to train')
-    training_params.add_argument('--nb_batch', type=int, default=32,
+    training_params.add_argument('--nb_batch', type=int, default=1000,
+                                 metavar='INT',
+                                 help='number of training batches')
+    training_params.add_argument('--batch_size', type=int, default=16,
                                  metavar='INT',
                                  help='number of samples per batch')
     training_params.add_argument('--plot', type=int, default=0,
                                  metavar='INT',
-                                 help='If set, plot samples from generator.')
+                                 help='if set, plot samples from generator.')
 
     model_params = parser.add_argument_group('model params')
     model_params.add_argument('--nb_latent', type=int, default=100,
@@ -122,12 +126,15 @@ if __name__ == '__main__':
                               help='dimensions in the latent vector')
     model_params.add_argument('--save_path', type=str, metavar='STR',
                               default='/tmp/mnist_gan.keras_model',
-                              help='Where to save the model after training')
+                              help='where to save the model after training')
     model_params.add_argument('--lite', default=False, action='store_true',
-                              help='If set, trains the lite version instead')
+                              help='if set, trains the lite version instead')
+    model_params.add_argument('--reset_weights', default=False,
+                              action='store_true',
+                              help='if set, the weights are reset')
 
     optimizer_params = parser.add_argument_group('optimizer params')
-    optimizer_params.add_argument('--lr', type=float, default=0.0002,
+    optimizer_params.add_argument('--lr', type=float, default=0.001,
                                   metavar='FLOAT',
                                   help='learning rate for Adam optimizer')
     optimizer_params.add_argument('--beta', type=float, default=0.5,
@@ -155,5 +162,13 @@ if __name__ == '__main__':
             plt.axis('off')
         plt.show()
 
-    model.save(args.save_path)
-    print('Saved model:', args.save_path)
+    model.generator.save_weights(args.save_path)
+    print('Saved weights:', args.save_path)
+
+    # Plots samples from the model.
+    classes = np.eye(model.output_shape[0][-1], dtype='int16')[range(3)]
+    x = model.sample(['normal', classes])
+    for sample in x:
+        plt.figure()
+        plt.imshow(sample)
+    plt.show()
