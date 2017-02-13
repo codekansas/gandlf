@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>gandlf</title>
+  
+
+  <link rel="shortcut icon" href="./img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="./css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="./css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="./css/highlight.css">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "None";
+  </script>
+  
+  <script src="./js/jquery-2.1.1.min.js"></script>
+  <script src="./js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="./js/highlight.pack.js"></script>
+  <script src="./js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> gandlf</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 current">
+        <a class="current" href=".">Home</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#generative-adversarial-network-deep-learning-framework">Generative Adversarial Network Deep Learning Framework</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#installation">Installation</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#quick-start">Quick Start</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#guiding-principles">Guiding Principles</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#issues-etiquette">Issues Etiquette</a></li>
+                
+            
+            </ul>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="background/">Background</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="model/">Model</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="tricks/">Tricks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Layers</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="layers/core/">Core</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="layers/attention/">Attention</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="layers/wrappers/">Wrappers</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="callbacks/">Callbacks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="losses/">Losses</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Examples</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="examples/xor/">Hello, world!</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="examples/mnist/mnist_gan/">MNIST GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="examples/upsample/">Upsampling GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="examples/vgg16/">Generating through VGG16</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">gandlf</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Home</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/codekansas/gandlf" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="generative-adversarial-network-deep-learning-framework">Generative Adversarial Network Deep Learning Framework</h2>
+<blockquote>
+<p>Home is now behind you, the world is ahead!</p>
+</blockquote>
+<p>This framework was built to make it possible for anyone to train <a href="https://arxiv.org/abs/1406.2661">Generative Adversarial Networks</a>. It is built on top of <a href="https://github.com/fchollet/keras">Keras</a>.</p>
+<p>Because it's built on top of Keras, it has the benefits of being <em>modular</em>, <em>minimal</em> and <em>extensible</em>, running on both CPU and GPU using either Tensorflow or Theano.</p>
+<h2 id="installation">Installation</h2>
+<p>Installing PyPi version:</p>
+<pre><code class="sh">pip install gandlf
+</code></pre>
+
+<p>Installing up-to-date version:</p>
+<pre><code class="sh">pip install git+https://github.com/codekansas/gandlf
+pip install h5py  # To save and load Keras models
+</code></pre>
+
+<p>Installing from source:</p>
+<pre><code class="sh">git clone https://github.com/codekansas/gandlf
+cd gandlf
+pip install -r requirements.txt
+python setup.py install
+</code></pre>
+
+<h2 id="quick-start">Quick Start</h2>
+<p>Below demonstrates how a Gandlf model works.</p>
+<pre><code class="python">import keras
+import gandlf
+
+def build_generator():
+    latent_vec = keras.layers.Input(shape=..., name='latent_vec')
+    output_layer = keras.layers.Dense(...)(latent_vec)
+    return keras.models.Model(input=[latent_vec], output=[output_layer])
+
+def build_discriminator():
+    data_input = keras.layers.Input(shape=..., name='data_input')
+    output_layer = keras.layers.Dense(..., name='src')(data_input)
+    return keras.models.Model(input=[data_input], output=[output_layer])
+
+model = gandlf.Model(generator=build_generator(),
+                     discriminator=build_discriminator())
+
+model.compile(optimizer='adam', loss='binary_crossentropy')
+
+# Latent vector is fed data from a random normal distribution.
+# &lt;input_data&gt; represents the real data.
+# 'zeros' and 'ones' represent 'fake' and 'real', respectively.
+# In this case, the discriminator learns 'real data' -&gt; 1
+# and fake 'generated data' -&gt; 0, while the generator learns
+# 'generated data' -&gt; 1.
+model.fit(['normal', &lt;input_data&gt;], ['ones', 'zeros'])
+
+# There are many ways to do the same thing, depending on the level
+# of specificity you need (especially when training with auxiliary parts).
+# The above function could be written as any of the following:
+model.fit(['normal', &lt;input_data&gt;], {'gen_real': 'ones', 'fake': 'zeros'})
+model.fit({'latent_vec': 'normal', 'data_input': &lt;input_data&gt;},
+          {'src': 'ones', 'src_fake': 'zeros'})
+model.fit({'latent_vec': 'normal', 'data_input': &lt;input_data&gt;},
+          {'src_gen': '1', 'src_real': '1', 'src_fake': '0'})
+
+# The model provides a function for predicting the discriminator's
+# output on some input data, which is useful for auxiliary classification.
+model_predictions = model.predict([&lt;input_data&gt;])
+
+# The model also provides a function for sampling from the generator.
+generated_data = model.sample(['normal'], num_samples=10)
+
+# Under the hood, other functions work like their Keras counterparts.
+model.save('/save/path')
+model.generator.save('/generator/save/path')
+model.discriminator.save('/discriminator/save/path')
+</code></pre>
+
+<h2 id="guiding-principles">Guiding Principles</h2>
+<p>In no particular order:</p>
+<ul>
+<li><em>Keras-esque</em>: The APIs should feel familiar for Keras users, with some minor changes.</li>
+<li><em>Powerful</em>: Models should support a wide variety of GAN architectures.</li>
+<li><em>Extensible</em>: Models should be easy to modify for different experiments.</li>
+</ul>
+<h2 id="issues-etiquette">Issues Etiquette</h2>
+<p>More examples would be awesome! If you use this for something, create a stand-alone script that can be run and I'll put it in the <code>examples</code> directory. Just create a pull request for it.</p>
+<p>Contribute code too! Anything that might be interesting and relevant for building GANs. Since this is more task-specific than Keras, there is more room for more experimental layers and ideas (notice that "dependability" isn't one of the guiding principles, although it would be good to not have a huge nest of bugs).</p>
+<p>If you encounter an error, I would really like to hear about it! But please raise an issue before creating a pull request, to discuss the error. Even better, look around the code to see if you can spot what's going wrong. Try to practice good etiquette, not just for this project, but for open source projects in general; this means making an honest attempt at solving the problem before asking for help.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="background/" class="btn btn-neutral float-right" title="Background"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+      
+        <span style="margin-left: 15px"><a href="background/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 0.14.0
+Build Date UTC : 2017-02-13 05:11:15.308159
+-->

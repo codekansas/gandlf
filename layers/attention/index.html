@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Attention - gandlf</title>
+  
+
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/highlight.css">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Attention";
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js"></script>
+  <script src="../../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../../js/highlight.pack.js"></script>
+  <script src="../../js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> gandlf</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../background/">Background</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../model/">Model</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../tricks/">Tricks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Layers</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../core/">Core</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 current">
+        <a class="current" href="./">Attention</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#recurrentattention1d">RecurrentAttention1D</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#recurrentattention2d">RecurrentAttention2D</a></li>
+                
+            
+            </ul>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../wrappers/">Wrappers</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../callbacks/">Callbacks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../losses/">Losses</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Examples</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../examples/xor/">Hello, world!</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../examples/mnist/mnist_gan/">MNIST GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../examples/upsample/">Upsampling GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../examples/vgg16/">Generating through VGG16</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">gandlf</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Layers &raquo;</li>
+        
+      
+    
+    <li>Attention</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/codekansas/gandlf" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p><a href="https://github.com/codekansas/gandlf/blob/master/gandlf/layers/attention.py">attention.py</a></p>
+<h2 id="recurrentattention1d">RecurrentAttention1D</h2>
+<pre><code class="python">gandlf.layers.RecurrentAttention1D(layer, attention, attn_activation='tanh', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer)
+</code></pre>
+
+<p>Makes the wrapped Keras RNN <code>layer</code> pay attention to the <code>attention</code> tensor, which has shape <code>(batch_size, num_attn_features)</code>.</p>
+<p>The updated hidden state is computed after each timestep as:</p>
+<pre><code class="python">trainable_params = [U_m, b_m, U_a, U_s, b_s]
+
+# Given hidden output &quot;h&quot; at each timestep:
+m = attn_activation(dot(h, U_m) + dot(attention, U_a) + b_m)
+s = attn_gate(dot(m, U_s) + b_s)
+h_new = s * h  # Element-wise weighting.
+</code></pre>
+
+<h2 id="recurrentattention2d">RecurrentAttention2D</h2>
+<pre><code class="python">gandlf.layers.RecurrentAttention2D(layer, attention, time_dist_activation='softmax', attn_gate_func='sigmoid', W_regularizer=None, b_regularizer=None)
+</code></pre>
+
+<p>Makes the wrapped Keras RNN <code>layer</code> pay attention to the <code>attention</code> tensor, which has shape <code>(batch_size, num_attn_timesteps, num_attn_features)</code>.</p>
+<p>The updated hidden state is computed after each timestep as:</p>
+<pre><code class="python">trainable_params = [U_t, b_t, U_a, b_a]
+
+# Given hidden output &quot;h&quot; at each timestep:
+t = time_dist_activation(dot(h, U_t), b_t)
+w = sum(t * attention)  # Weights each timestep by `t`.
+s = attn_gate_func(dot(w, U_a) + b_a)
+h_new = s * h  # Element-wise weighting.
+</code></pre>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../wrappers/" class="btn btn-neutral float-right" title="Wrappers"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../core/" class="btn btn-neutral" title="Core"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../core/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../wrappers/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>

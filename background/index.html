@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Background - gandlf</title>
+  
+
+  <link rel="shortcut icon" href="../img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Background";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script>
+  <script src="../js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> gandlf</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 current">
+        <a class="current" href="./">Background</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#what-is-a-gan">What is a GAN?</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#why-are-gans-interesting">Why are GANs interesting?</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#resources">Resources</a></li>
+                
+            
+            </ul>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../model/">Model</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../tricks/">Tricks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Layers</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/core/">Core</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/attention/">Attention</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/wrappers/">Wrappers</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../callbacks/">Callbacks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../losses/">Losses</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Examples</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/xor/">Hello, world!</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/mnist/mnist_gan/">MNIST GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/upsample/">Upsampling GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/vgg16/">Generating through VGG16</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">gandlf</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Background</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/codekansas/gandlf" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="what-is-a-gan">What is a GAN?</h2>
+<p>GAN stands for Generative Adversarial Network. The graphic below provides a scientific illustration of what a GAN does.</p>
+<p><img alt="Talking GAN" src="../resources/talking_gan.png" /></p>
+<p>The GAN consists of two neural networks: a generator and a discriminator. The discriminator's job is to take in some real data and some fake data and decide which one is which. The generator's job is to generate good enough fake data that the discriminator can't tell the difference.</p>
+<p>GANs were introduced by Ian Goodfellow in an <a href="https://arxiv.org/abs/1406.2661">eponymous paper</a>. Since then, many researchers have come up with different architectures and tricks to improve training. Gandlf aims to make these advancements more accessible and provide a platform for experimenting with different tweaks. It is built on top of the popular <a href="https://keras.io/">Keras</a> library, and therefore supports training in both Theano and Tensorflow.</p>
+<h2 id="why-are-gans-interesting">Why are GANs interesting?</h2>
+<p>GANs are one of the many exciting things to come out of the field of deep learning in the last several years. They have been used to produce some very realistic-looking data samples (check out the Examples tabs).</p>
+<p>To understand why GANs are worth thinking about, here is a thought experiment. Imagine you're watching cars, and trying to predict the color of the next car to drive by. You predict that it will be red, but it turns out to be blue. A conventional neural network loss function would punish your guess, even though it is perfectly reasonable, much more reasonable than guessing, for example, that the next car would be a horse. To be safe, you would have to guess some average of all the possible car colors, so that you're not totally wrong, but never totally right, either. With a GAN, however, would be punish you for guessing a horse, but not for guessing the wrong color car; in other words, as long as you guess a reasonable color, the GAN would be happy.</p>
+<p>What is going on here? After some training, hopefully the discriminator learns a representation of "realistic" data. From this representation, the generator learns to "trick" the discriminator. To do this, it just has to produce "realistic" samples; it is only punished if the samples it produces don't seem realistic.</p>
+<h2 id="resources">Resources</h2>
+<p>Below are some resources for learning more about GANs.</p>
+<ul>
+<li><a href="https://www.reddit.com/r/MachineLearning/">/r/MachineLearning</a></li>
+<li><a href="https://www.facebook.com/groups/675606912596390/">Adversarial Training Facebook Group</a></li>
+</ul>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/HN9NRhm9waY" frameborder="0" style="padding-bottom: 20px;" allowfullscreen></iframe>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../model/" class="btn btn-neutral float-right" title="Model"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href=".." class="btn btn-neutral" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href=".." style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../model/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>

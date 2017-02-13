@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Model - gandlf</title>
+  
+
+  <link rel="shortcut icon" href="../img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Model";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script>
+  <script src="../js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> gandlf</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../background/">Background</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 current">
+        <a class="current" href="./">Model</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#inputs">Inputs</a></li>
+                
+            
+                <li class="toctree-l3"><a href="#modes">Modes</a></li>
+                
+            
+            </ul>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../tricks/">Tricks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Layers</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/core/">Core</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/attention/">Attention</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../layers/wrappers/">Wrappers</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../callbacks/">Callbacks</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../losses/">Losses</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Examples</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/xor/">Hello, world!</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/mnist/mnist_gan/">MNIST GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/upsample/">Upsampling GAN</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../examples/vgg16/">Generating through VGG16</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">gandlf</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Model</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/codekansas/gandlf" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p>Gandlf models employ a few tricks to make training Generative Adversarial Networks much easier than they would be in conventional Keras code.</p>
+<h2 id="inputs">Inputs</h2>
+<blockquote>
+<p>The principle of generating small amounts of finite improbability by simply hooking the logic circuits of a Bambleweeny 57 Sub-Meson Brain to an atomic vector plotter suspended in a strong Brownian Motion producer (say a nice hot cup of tea) were of course well understood...</p>
+</blockquote>
+<p>Conceptually, the Generator part of a Generative Adversarial Network learns to map a random data distribution to the distribution of real data. When building them, you therefore need a good way to produce random latent variables. In Gandlf, this can be done easily, as follows:</p>
+<pre><code class="python">latent_vec = keras.layers.Input(shape, name='latent_vec')
+generator_model = keras.models.Model(input=[latent_vec], ...)
+model = gandlf.Model(generator=generator_model, discriminator=...)
+model.compile(optimizer, loss)
+model.fit(x=['normal', &lt;real_data&gt;], ...)
+</code></pre>
+
+<p>By specifying <code>normal</code> as the input to <code>latent_vec</code>, the model will pull random data from a normal distribution to populate the <code>latent_vec</code> input whenever it is needed. Similarly, <code>uniform</code> can be used for the same purpose. By default, the distribution has a mean of zero and variance of one. To change this, a function can be passed which takes as an argument <code>batch_size</code> and returns the desired Numpy array:</p>
+<pre><code class="python">import numpy as np
+func = lambda batch_size: np.random.normal(loc=1., scale=0.1, size=(batch_size, 3, 4))
+model.fit(x=[func, &lt;real_data&gt;], ...)
+</code></pre>
+
+<h2 id="modes">Modes</h2>
+<p>Generative adversarial networks have two modes: the generator part and the discriminator part. In Gandlf, the discriminator part is also separated into two modes; learning to push the generated data towards <code>fake</code> and to push the real data towards <code>real</code>.</p>
+<p>A typical discriminator model might have two outputs: one to predict if the sample being recieved is real or fake data, and one to act as an auxiliary classifier (in the example of MNIST digits, the auxiliary classifier might predict which digit the sample belongs to). This can be done in Gandlf as follows:</p>
+<pre><code class="python">is_it_real = keras.layers.SomeLayer(..., name='is_it_real')
+aux_class = keras.layers.SomeLayer(..., name='aux_class')
+discriminator = Model(inputs=[...], outputs=[is_it_real, aux_class])
+model = gandlf.Model(generator=..., discriminator=discriminator)
+</code></pre>
+
+<p>One problem is that the outputs have to be specified for each mode. The diagram below illustrates the three training modes:</p>
+<p><img alt="Training Modes" src="../resources/training_modes.png" /></p>
+<p>The suffixes above are used in Gandlf naming to specify the outputs. The example below illustrates how to specify the desired outputs for the <code>fit</code> function on the model above:</p>
+<pre><code class="python">model.fit(inputs=[...], outputs={
+    # Tells the generator to make the discriminator's is_it_real output
+    # go towards 1 for generated samples.
+    'is_it_real_gen': 'ones',
+
+    # Tells the generator to generate samples that are classified as
+    # their correct classification by the discriminator.
+    'aux_class_gen': &lt;correct_classes&gt;
+
+    # Tells the discriminator to make the is_it_real output go towards 0
+    # for generated samples.
+    'is_it_real_fake': 'zeros',
+
+    # Tells the discriminator to classify the fake samples as
+    # some class (this can be turned off using loss_weights).
+    'aux_class_fake': &lt;some_classes&gt;
+
+    # Tells the discriminator to make the is_it_real output go towards 1
+    # for real samples.
+    'is_it_real_real': 'ones',
+
+    # Tells the discriminator to classify the real samples as their
+    # correct classes.
+    'aux_class_real': &lt;correct_classes&gt;
+})
+</code></pre>
+
+<p>The <code>fit</code> function can be written slightly more compactly by combining the <code>gen</code> and <code>real</code> target classes. This is written as:</p>
+<pre><code class="python">model.fit(inputs=[...], outputs={
+    'is_it_real_gen_real': 'ones', 'is_it_real_fake': 'zeros',
+    'aux_class_real_gen': &lt;correct_classes&gt;, 'aux_class_fake': &lt;some_classes&gt;,
+})
+</code></pre>
+
+<p>Similar shorthand can be used when specifying <code>optimizer</code> and <code>loss</code> in the <code>compile</code> method. For the optimizer, passing a list or tuple of optimizers with length 2 will assign the first optimizer to train the discriminator and the second optimizer to train the generator. For the loss, the same naming conventions apply:</p>
+<pre><code class="python">model.compile(optimizer=['adam', 'sgd'], loss={
+    'is_it_real': 'binary_crossentropy',
+    'aux_class': 'categorical_crossentropy',
+})
+
+# This method is equivalent, but much longer and more redundant.
+model.compile(optimizer=['adam', 'sgd'], loss={
+    'is_it_real_gen': 'binary_crossentropy',
+    'is_it_real_real': 'binary_crossentropy',
+    'is_it_real_fake': 'binary_crossentropy',
+
+    'aux_class_gen_real': 'categorical_crossentropy',
+    'aux_class_fake': 'categorical_crossentropy',
+})
+</code></pre>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../tricks/" class="btn btn-neutral float-right" title="Tricks"/>Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../background/" class="btn btn-neutral" title="Background"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../background/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../tricks/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>
