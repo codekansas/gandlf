@@ -156,13 +156,6 @@
     </li>
 
         
-            
-    <li class="toctree-l1 ">
-        <a class="" href="../vgg16/">Generating through VGG16</a>
-        
-    </li>
-
-        
     </ul>
 <li>
           
@@ -211,6 +204,7 @@
 <p><a href="../../resources/upsampling/resolved_five.png"><img alt="MNIST GAN Upsampled" src="../../resources/upsampling/resolved_five.png" /></a></p>
 <p>The same process can be done on CIFAR images:</p>
 <p><a href="../../resources/upsampling/resolved_bear.png"><img alt="CIFAR GAN Upsampled" src="../../resources/upsampling/resolved_bear.png" /></a></p>
+<p><a href="../../resources/upsampling/resolved_truck.png"><img alt="CIFAR GAN Upsampled" src="../../resources/upsampling/resolved_truck.png" /></a></p>
 <h1 id="model-architecture">Model architecture</h1>
 <p>The generator and discriminator are both convolutional neural networks. I played around with different sized models. The MNIST and CIFAR models were trained for 10 epochs, which took about 10 minutes on a Titan X GPU. The generator architecture first had an upsampling layer, then several convolutional layers.</p>
 <p>The upsampling part took advantage of the fact that the filters in the convolutional layer are dimension-invariant, so the same filters can be applied at double the resolution. To do sampling, the model is reconstructed at twice the resolution, then the trained generator weights are loaded in order to produce a new image.</p>
@@ -226,8 +220,6 @@
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../vgg16/" class="btn btn-neutral float-right" title="Generating through VGG16"/>Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
         <a href="../mnist/mnist_gan/" class="btn btn-neutral" title="MNIST GAN"><span class="icon icon-circle-arrow-left"></span> Previous</a>
@@ -260,8 +252,6 @@
       
         <span><a href="../mnist/mnist_gan/" style="color: #fcfcfc;">&laquo; Previous</a></span>
       
-      
-        <span style="margin-left: 15px"><a href="../vgg16/" style="color: #fcfcfc">Next &raquo;</a></span>
       
     </span>
 </div>
