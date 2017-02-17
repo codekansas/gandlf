@@ -8,6 +8,8 @@ The same process can be done on CIFAR images:
 
 [![CIFAR GAN Upsampled](/resources/upsampling/resolved_bear.png)](/resources/upsampling/resolved_bear.png)
 
+[![CIFAR GAN Upsampled](/resources/upsampling/resolved_truck.png)](/resources/upsampling/resolved_truck.png)
+
 # Model architecture
 
 The generator and discriminator are both convolutional neural networks. I played around with different sized models. The MNIST and CIFAR models were trained for 10 epochs, which took about 10 minutes on a Titan X GPU. The generator architecture first had an upsampling layer, then several convolutional layers.
@@ -19,4 +21,3 @@ The upsampling part took advantage of the fact that the filters in the convoluti
  - [neural-enhance](https://github.com/alexjc/neural-enhance): A Lasagne implementation of this upsampling idea
  - [Generating Large Images from Latent Vectors](http://blog.otoro.net/2016/04/01/generating-large-images-from-latent-vectors/): Train a model to take (X, Y) coordinates and output a pixel intensity, then interpolate between points to get high-resolution images
  - [Pixel Recursive Super Resolution](https://arxiv.org/pdf/1702.00783.pdf): Train a PixelCNN model to un-pixelate faces
-
