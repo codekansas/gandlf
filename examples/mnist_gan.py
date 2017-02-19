@@ -221,6 +221,7 @@ def train_model(args, X_train, y_train, y_train_ohe):
     supervised = not args.unsupervised
 
     if args.lite:
+        print('building lite version')
         generator = build_generator_lite(args.nb_latent, supervised)
         discriminator = build_discriminator_lite(supervised)
     else:

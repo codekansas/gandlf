@@ -19,4 +19,5 @@ pages:
   - Hello, world!: examples/xor.md
   - MNIST GAN: examples/mnist/mnist_gan.md
   - Upsampling GAN: examples/upsample.md
+  - Reversing Generator: examples/reverse.md
 

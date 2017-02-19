@@ -195,23 +195,17 @@ if __name__ == '__main__':
     print('Saved generator weights to "%s"' % args.generator_path)
 
     # Samples from the model.
-    # X_inputs = [np.stack([X_low_dim[0] for _ in range(3)]),
-    #             np.stack([X_data[0] for _ in range(3)])]
     X_inputs = [X_low_dim[:3], X_data[:3]]
     for _ in range(4):
         X_inputs.append(upsample(X_inputs[-1], args.generator_path, up_factor))
         print('New shape:', X_inputs[-1].shape)
 
-    # for j in range(3):
-    #     plt.figure()
-    #
-    #     for i in range(6):
-    #         plt.subplot(2, 3, i + 1)
-    #         plt.imshow(-np.squeeze(X_inputs[i][j]), cmap='gray')
-    #         plt.axis('off')
-    #
-    # plt.show()
+    for j in range(3):
+        plt.figure()
 
-    plt.figure(dpi=100)
-    plt.imshow(-np.squeeze(X_inputs[-1][0]), cmap='gray')
-    plt.savefig('/home/judgingmoloch/Desktop/asdf.png', dpi=300)
+        for i in range(6):
+            plt.subplot(2, 3, i + 1)
+            plt.imshow(-np.squeeze(X_inputs[i][j]), cmap='gray')
+            plt.axis('off')
+
+    plt.show()
