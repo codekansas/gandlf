@@ -187,7 +187,7 @@
         },
         {
             "location": "/examples/reverse/",
-            "text": "upsample_gan.py\n\n\nThis example shows how to use gradient descent to map an image back to the latent vector that it corresponds to. This approach can be done on an untrained model or a trained model. The GIF on the left shows the gradient descent process, as the latent vector moves in the direction that causes the generator to produce the target image on the right.\n\n\n\n\n\n\nThis could be an interesting way to benchmark the GAN performance; given a real image, map it backwards to its latent vector, and see how far the latent vector is from a normal vector.",
+            "text": "reversing_gan.py\n\n\nThis example shows how to use gradient descent to map an image back to the latent vector that it corresponds to. This approach can be done on an untrained model or a trained model. The GIF on the left shows the gradient descent process, as the latent vector moves in the direction that causes the generator to produce the target image on the right.",
             "title": "Reversing Generator"
         }
     ]
