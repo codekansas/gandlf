@@ -884,7 +884,14 @@ class Model(keras.models.Model):
         input_names = self.input_names
         input_shapes = self.internal_input_shapes
         output_names = self.output_names
-        output_shapes = self.internal_output_shapes
+        output_shapes = []
+        for output_shape, loss_fn in zip(self.internal_output_shapes, self.loss_functions):
+            if loss_fn.__name__ == 'sparse_categorical_crossentropy':
+                output_shapes.append(output_shape[:-1] + (1,))
+            elif getattr(objectives, loss_fn.__name__, None) is None:
+                output_shapes.append(None)
+            else:
+                output_shapes.append(output_shape)
 
         x, y, sample_weights, nb_train_samples = self._standardize_user_data(
             x, y, sample_weight, class_weight, input_names, input_shapes,
