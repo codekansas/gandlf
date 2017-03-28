@@ -18,19 +18,19 @@ run both as supervised and unsupervised versions.
 
 To show all command line options:
 
-    ./examples/xor.py --help
+    ./examples/mnist_gan.py --help
 
 To train the lite version of the model:
 
-    ./examples/xor.py --lite
+    ./examples/mnist_gan.py --lite
 
 Samples from the model can be plotted using Matplotlib:
 
-    ./examples/xor.py --plot 3
+    ./examples/mnist_gan.py --plot 3
 
 The model can be run in unsupervised mode (pure GAN):
 
-    ./examples/xor.py --unsupervised
+    ./examples/mnist_gan.py --unsupervised
 """
 
 from __future__ import print_function
