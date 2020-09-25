@@ -8,5 +8,5 @@ protobuf==3.1.0.post1
 PyYAML==5.1
 scipy==0.18.1
 six==1.10.0
-tensorflow==1.15.0
+tensorflow==1.15.4
 Theano==0.8.2
